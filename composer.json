@@ -15,7 +15,7 @@
         "laravel/framework": "^7.29",
         "laravel/tinker": "^2.5",
         "niklasravnsborg/laravel-pdf": "^4.1",
-        "num-num/ubl-invoice": "^1.13"
+        "marwan2/ubl-invoice": "dev-master"
     },
     "require-dev": {
         "facade/ignition": "^2.0",
@@ -48,6 +48,12 @@
             "Tests\\": "tests/"
         }
     },
+    "repositories": [
+        {
+          "type": "git",
+          "url": "https://github.com/marwan2/ubl-invoice.git"
+        }
+    ],
     "minimum-stability": "dev",
     "prefer-stable": true,
     "scripts": {
