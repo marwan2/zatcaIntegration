@@ -315,41 +315,53 @@ class XMLInvoice extends Model
     public function invoiceTaxes() {
         $invoice = $this->getInvoice();
         $taxAmount = $invoice['tax_total'];
-        $taxableAmount = $invoice['display_total'];
+        $taxTotal = new \NumNum\UBL\TaxTotal();
 
-        $invoice_taxes = $invoice['taxes'][0] ?? null;
-        $tname = 'VAT';
-        $percent = 0.0;
-        $tax_total = $invoice['tax_total'];
+        foreach($invoice['taxes'] as $inv_tax) {
+            $taxSubTotal = (new \NumNum\UBL\TaxSubTotal())
+                ->setTaxCategory($this->getTaxCategory($inv_tax))
+                ->setTaxableAmount($inv_tax['net_amount'])
+                ->setTaxAmount($inv_tax['amount']);
 
-        if($invoice_taxes) {
-            $tname = $invoice_taxes['name'];
-            $percent = $invoice_taxes['rate'] / 100;
-            $tax_total = $invoice_taxes['amount'];
+            $taxTotal->addTaxSubTotal($taxSubTotal);
         }
 
-        // Tax scheme
-        $taxScheme = (new \NumNum\UBL\TaxScheme())
-            ->setId(0);
+        $taxTotal->setTaxAmount($taxAmount);
+        return $taxTotal;
+    }
 
-        // Total Taxes
-        $taxCategory = (new \NumNum\UBL\TaxCategory())
-            ->setId(0)
+
+    // TaxExemptionReasonCode: Code Description from UN/CEFACT code list 5305, D.16B
+    // Fix me: add specific reason & reason code
+    public function getTaxCategory($invoice_tax) {
+        $tname = $invoice_tax['name'];
+        $percent = 0;
+        $id = 'VAT';
+        $taxCategory = new \NumNum\UBL\TaxCategory();
+
+        if($invoice_tax['rate'] == null) {
+            $id = 'E';
+            $taxCategory->setTaxExemptionReason('Financial services mentioned in Article 29 of the VAT Regulations');
+            $taxCategory->setTaxExemptionReasonCode('VATEX-SA-29');
+        } else if($invoice_tax['rate'] == 0) {
+            $id = 'Z';
+            $taxCategory->setTaxExemptionReason('Export of goods');
+            $taxCategory->setTaxExemptionReasonCode('VATEX-SA-32');
+        } else {
+            $id = 'S';
+            $percent = $invoice_tax['rate'];
+        }
+
+        $taxScheme = (new \NumNum\UBL\TaxScheme())
+            ->setId('VAT');
+
+        $taxCategory
+            ->setId($id)
             ->setName($tname)
             ->setPercent($percent)
             ->setTaxScheme($taxScheme);
 
-        $taxSubTotal = (new \NumNum\UBL\TaxSubTotal())
-            ->setTaxableAmount($taxableAmount)
-            ->setTaxAmount($taxAmount)
-            ->setTaxCategory($taxCategory);
-
-
-        $taxTotal = (new \NumNum\UBL\TaxTotal())
-            ->addTaxSubTotal($taxSubTotal)
-            ->setTaxAmount($tax_total);
-
-        return $taxTotal;
+        return $taxCategory;
     }
 
     // if taxCurrencyCode provided 
