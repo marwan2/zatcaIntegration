@@ -66,6 +66,7 @@ class XMLInvoice extends Model
         $invoiceTypeCodeName = \App\Invoice::getTypeCodeName('01');
 
         $issue_date = new \DateTime($invoice['order_date']);
+        $issue_time = new \DateTime(date('H:i:s'));
         $due_date = new \DateTime($invoice['due_date']);
         $invoice_id = $invoice['ref'];
         $curr_code = $invoice['customer']['curr_code'] ?? 'SAR';
@@ -75,13 +76,24 @@ class XMLInvoice extends Model
         $additionalDocRef = $this->additionalDocumentReference();
         $invoice_uuid = \App\Invoice::generateUUID();
 
+        $documentSignatures = (new \App\Signature())->getDocSignatures();
+        $ublExtension = (new \NumNum\UBL\Extensions\UBLExtension())
+            ->setExtensionURI('urn:oasis:names:specification:ubl:dsig:enveloped:xades')
+            ->setExtensionContent($documentSignatures);
+        $extensions = (new \NumNum\UBL\Extensions\UBLExtensions())->addUBLExtension($ublExtension);
+
+        $signature = (new \NumNum\UBL\Signature())
+            ->setId('urn:oasis:names:specification:ubl:signature:Invoice')
+            ->setSignatureMethod('urn:oasis:names:specification:ubl:dsig:enveloped:xades');
+
         // Invoice object
         $invoiceXML = new \NumNum\UBL\Invoice();
         $invoiceXML->setId($invoice_id)
             ->setUUID($invoice_uuid)
             ->setInvoiceTypeCode($invoiceTypeCode, $invoiceTypeCodeName)
-            ->setCopyIndicator(false)
+            //->setCopyIndicator(false)
             ->setIssueDate($issue_date)
+            ->setIssueTime($issue_time)
             ->setDueDate($due_date)
             ->setAccountingSupplierParty($supplierCompany)
             ->setAccountingCustomerParty($clientCompany)
@@ -92,7 +104,8 @@ class XMLInvoice extends Model
             ->setTaxCurrencyCode($curr_code)
             ->setPaymentMeans($paymentMeans)
             ->setProfileID('reporting:1.0')
-            ->setNote($this->clean($invoice['comments']))
+            ->setSignature($signature)
+            //->setNote($this->clean($invoice['comments']))
         ;
 
         if($curr_code) {
@@ -106,6 +119,8 @@ class XMLInvoice extends Model
         $invoiceXML->addAdditionalDocumentReference($ref_ICV);
         $invoiceXML->addAdditionalDocumentReference($ref_PIH);
         $invoiceXML->addAdditionalDocumentReference($ref_QR);
+
+        //$invoiceXML->setExtensions($extensions);
 
         // Use \NumNum\UBL\Generator to generate an XML string
         $generator = new \NumNum\UBL\Generator();
@@ -127,6 +142,7 @@ class XMLInvoice extends Model
         $postal_zone = $business->postal_code;
         $plot_inden = $business->additional_no;
         $district = $business->district;
+        $countrySubentity = $business->country_subentity;
         $companyID = $this->getBusiness()->trn;
         $identificationID = $business->identification_id;
 
@@ -140,6 +156,7 @@ class XMLInvoice extends Model
             ->setBuildingNumber($building_no)
             ->setCityName($city_name)
             ->setPostalZone($postal_zone)
+            ->setCountrySubentity($countrySubentity)
             ->setCountry($country);
 
         if($plot_inden) { 
@@ -155,14 +172,16 @@ class XMLInvoice extends Model
         // Supplier company node
         $supplierCompany = (new \NumNum\UBL\Party())
             ->setName($supplier_name)
-            ->setPhysicalLocation($supplierAddress)
             ->setPostalAddress($supplierAddress)
             ->setLegalEntity($legalEntity)
             ->setPartyTaxScheme($partyTaxScheme);
 
-        if($identificationID) {
-            $supplierCompany->setPartyIdentificationId($identificationID);
-            $supplierCompany->setPartyIdentificationSchemeId($business->identification_scheme);
+        $partyIden = (new \NumNum\UBL\PartyIdentification())
+            ->setId($identificationID)
+            ->setSchemeId($business->identification_scheme);
+
+        if($partyIden) {
+            $supplierCompany->setPartyIdentification($partyIden);
         }
 
         return $supplierCompany;
@@ -174,7 +193,8 @@ class XMLInvoice extends Model
 
         $max_limit = 127;
 
-        $customer_name = $invoice['customer']['cust_ref'] ?? '';
+        $customer_id = $invoice['customer']['id'] ?? 0;
+        $customer_name = $invoice['customer']['cust_ref'] ?? $invoice['customer']['debtor_ref'];
         $customer_ref = $invoice['customer']['debtor_ref'] ?? $customer_name;
         $customer_email = $invoice['customer']['email'];
         $customer_phone = $invoice['customer']['phone'];
@@ -203,7 +223,7 @@ class XMLInvoice extends Model
         if($country_iso2 == 'SA') {
             $district = 'ABC Dist';
             $additionalNo = '4574';
-            $additionalStreetName = '4513'; // 4 digits only
+            $additionalStreetName = '1004'; // 4 digits only
 
             $customerAddress->setPlotIdentification($additionalStreetName);
             $customerAddress->setDistrict($district);
@@ -235,6 +255,15 @@ class XMLInvoice extends Model
         $legalEntity = $this->legalEntity($customer_ref);
         $clientCompany->setLegalEntity($legalEntity);
 
+        $idenScheme = 'OTH';
+        $partyIden = (new \NumNum\UBL\PartyIdentification())
+            ->setId($customer_id)
+            ->setSchemeId($idenScheme);
+
+        if($partyIden) {
+            $clientCompany->setPartyIdentification($partyIden);
+        }
+
         return $clientCompany;
     }
 
@@ -253,6 +282,7 @@ class XMLInvoice extends Model
         $invoiceLines = [];
         foreach($invoice['line_items'] as $item) {
             $item_unit = (isset($item['units']) && $item['units']=='each') ? \NumNum\UBL\UnitCode::PIECE : \NumNum\UBL\UnitCode::UNIT;
+            $item_unit = 'PCE';
             $lineExtAmount = $calc->calcItemTotal($item);
             $roundingAmount = $lineExtAmount + $item['tax'];
 
@@ -286,6 +316,7 @@ class XMLInvoice extends Model
                 ->setInvoicePeriod($invoicePeriod)
                 ->setPrice($price)
                 ->setTaxTotal($lineTaxTotal)
+                ->setUnitCode($item_unit)
                 ->setInvoicedQuantity($item['qty_dispatched'])
                 ->setLineExtensionAmount($lineExtAmount);
         }
@@ -501,7 +532,7 @@ class XMLInvoice extends Model
 
         $taxCat = (new \NumNum\UBL\ClassifiedTaxCategory())
             ->setId($classified_id)
-            ->setName($item['tax_type_name'])
+            //->setName($item['tax_type_name'])
             ->setPercent($item['tax'])
             ->setTaxScheme($taxScheme);
 
