@@ -10,6 +10,7 @@ Route::get('encode-file', 'InvoicesController@encodeFile');
 
 Route::get('invoices/validate', 'BusinessesController@validateXML');
 Route::get('invoices/{trans_no}/{business_id}/pdf', 'BusinessesController@getPDF');
+Route::get('invoices/{business_id}/show/{trans_no}/', 'BusinessesController@showInvoice');
 Route::get('invoices/{business_id}/{trans_no}', 'BusinessesController@getTemplate');
 Route::get('invoices/{business_id}/xml/{trans_no}', 'BusinessesController@generateXML');
 Route::get('invoices', 'BusinessesController@invoices');

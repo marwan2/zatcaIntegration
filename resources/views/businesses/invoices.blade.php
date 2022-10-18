@@ -33,7 +33,7 @@
 			<tbody>
 				@foreach($invoices as $invoice)
 				<tr>
-					<td>{{$invoice['trans_no']}}</td>
+					<td><a href="{{$inv->url($invoice['trans_no'])}}">{{$invoice['trans_no']}}</a></td>
 					<td>{{$invoice['reference']}}</td>
 					<td>{{$invoice['debtor_ref']}}</td>
 					<td>{{$invoice['ov_amount']}} {{$invoice['curr_code']}} </td>

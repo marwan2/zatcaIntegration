@@ -24,8 +24,12 @@ class Invoice extends Model
         $this->business = $business;
     }
 
+    public function url($trans_no) {
+        return url("invoices/{$this->business->id}/show/{$trans_no}");
+    }
+
     public function pdf_url($trans_no) {
-        return url("invoices/{$trans_no}/{$this->business}/pdf");
+        return url("invoices/{$trans_no}/{$this->business->id}/pdf");
     }
 
     public function xml_url($trans_no) {

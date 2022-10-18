@@ -114,4 +114,26 @@ class BusinessesController extends Controller
         }
         return '';
     }
+
+    public function showInvoice($business_id, $trans_no) 
+    {
+        if($business_id && $trans_no) {
+            $business = Business::findOrFail($business_id);
+            $invoice = \App\Invoice::getInvoice($trans_no, $business);
+            $invoice['trans_no'] = $trans_no;
+
+            $qr = new \App\ZatcaQR(
+                $invoice['cust_ref'], 
+                strval($invoice['customer']['tax_id']), 
+                $invoice['order_date'], 
+                $invoice['display_total'], 
+                $invoice['tax_total']
+            );
+
+            $qrCode = '';
+            $qrCode = $qr->getQRCode();
+            return view('businesses.invoice', compact('invoice', 'business', 'qrCode'));
+        }
+        return 'Missing params.';
+    }
 }

@@ -14,8 +14,9 @@
         "guzzlehttp/guzzle": "^7.5",
         "laravel/framework": "^7.29",
         "laravel/tinker": "^2.5",
+        "marwan2/ubl-invoice": "dev-master",
         "niklasravnsborg/laravel-pdf": "^4.1",
-        "marwan2/ubl-invoice": "dev-master"
+        "chillerlan/php-qrcode": "^3.4"
     },
     "require-dev": {
         "facade/ignition": "^2.0",

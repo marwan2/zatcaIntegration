@@ -43,16 +43,6 @@ class XMLInvoice extends Model
     }
 
     public function getXML() {
-        // Missing data
-        /*
-            Business: 
-                country ISO2
-                Street name
-                Building no
-                City
-                Postal code
-        */
-
         $invoice = $this->getInvoice();
         
         $supplierCompany = $this->businessNode();
@@ -360,7 +350,6 @@ class XMLInvoice extends Model
         $taxTotal->setTaxAmount($taxAmount);
         return $taxTotal;
     }
-
 
     // TaxExemptionReasonCode: Code Description from UN/CEFACT code list 5305, D.16B
     // Fix me: add specific reason & reason code
