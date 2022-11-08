@@ -78,7 +78,7 @@ class Calc extends Model
     public function calcItemTotal($stock_item, $totalExcludedTax=true) {
     	$stock_item = (object) $stock_item;
 
-    	list($total, $discount) = $this->getLineTotal($stock_item);
+    	$total = $this->getLineTotal($stock_item);
         $tax_amount = $this->calculateItemTax($stock_item, $total);
 
         if($totalExcludedTax) {
@@ -91,14 +91,28 @@ class Calc extends Model
         return ($this->taxIncluded) ? $total : ($total + $tax_amount);
     }
 
+    public function getDiscount($item) {
+      $discount = floatval($item['qty']) * floatval($item['price']) * floatval($item['discount']);
+      return $discount;
+    }
+
     public function getLineTotal($stock_item) {
         $quantity = $stock_item->qty_dispatched;
-
-        $line_total = 0;
-        $discount = 0;
         $discount = $quantity * $stock_item->price * $stock_item->discount;
-        $line_total = $line_total + $quantity * $stock_item->price * (1 - $stock_item->discount);
+        $line_total = $quantity * $stock_item->price * (1 - $stock_item->discount);
 
-        return [$line_total, $discount];
+        return $line_total;
+    }
+
+    public function allowanceTotal() {
+        $total = 0;
+        foreach($this->invoice['line_items'] as $item) {
+            $total += $this->getDiscount($item);
+        }
+
+        if(isset($this->invoice['freight_cost'])) {
+            $total += floatval($this->invoice['freight_cost']);
+        }
+        return $total;
     }
 }

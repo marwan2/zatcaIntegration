@@ -8,6 +8,7 @@ class XMLInvoice extends Model
     private $schema = 'http://docs.oasis-open.org/ubl/os-UBL-2.1/xsd/maindoc/UBL-Invoice-2.1.xsd';
     public static $base_dir = 'xmls';
     public $invoice;
+    public $invoiceInDB;
     public $business;
     private $trans_no;
 
@@ -42,6 +43,10 @@ class XMLInvoice extends Model
         $this->invoice = $invoice;
     }
 
+    public function setInvoiceInDB($invoiceInDB) {
+        $this->invoiceInDB = $invoiceInDB;
+    }
+
     public function getXML() {
         $invoice = $this->getInvoice();
         
@@ -64,7 +69,7 @@ class XMLInvoice extends Model
 
         $docReference = (new \NumNum\UBL\ContractDocumentReference())->setId($invoice['ref']);
         $additionalDocRef = $this->additionalDocumentReference();
-        $invoice_uuid = \App\Invoice::generateUUID();
+        $invoice_uuid = $this->invoiceInDB->uuid ?? \App\Invoice::generateUUID();
 
         $documentSignatures = (new \App\Signature())->getDocSignatures();
         $ublExtension = (new \NumNum\UBL\Extensions\UBLExtension())
@@ -110,9 +115,13 @@ class XMLInvoice extends Model
         $invoiceXML->addAdditionalDocumentReference($ref_PIH);
         $invoiceXML->addAdditionalDocumentReference($ref_QR);
 
+        $allowanceCharge = $this->documentAllowanceCharge();
+        if($allowanceCharge) {
+            $invoiceXML->setAllowanceCharges($allowanceCharge);
+        }
+
         //$invoiceXML->setExtensions($extensions);
 
-        // Use \NumNum\UBL\Generator to generate an XML string
         $generator = new \NumNum\UBL\Generator();
         $outputXMLString = $generator->invoice($invoiceXML, $curr_code);
 
@@ -257,6 +266,64 @@ class XMLInvoice extends Model
         return $clientCompany;
     }
 
+    public function allowanceTaxCategory($item=null) {
+        $taxSchemeID = 'VAT';
+        $taxScheme = (new \NumNum\UBL\TaxScheme())->setId($taxSchemeID);
+        $classified_id = 'S';
+        $taxCategory = new \NumNum\UBL\TaxCategory();
+        $def_percent = 15;
+
+        if($item) {
+            if($item['tax'] == 0 && stristr($item['tax_type_name'], 'exempt')) {
+                $classified_id = 'E';
+            }
+            if($item['tax'] == 0 && stristr($item['tax_type_name'], 'zero')) {
+                $classified_id = 'Z';
+            }
+            
+            $taxCategory->setId($classified_id)
+                ->setPercent($item['tax'])
+                ->setTaxScheme($taxScheme);
+        } else {
+            $taxCategory->setId($classified_id)
+                ->setPercent($def_percent)
+                ->setTaxScheme($taxScheme);
+        }
+
+        return $taxCategory;
+    }
+
+    public function documentAllowanceCharge() {
+        $invoice = $this->getInvoice();
+        if(!$invoice) {
+            return;
+        }
+
+        $calc = new Calc;
+        $calc->setInvoice($this->getInvoice())->setTaxIncluded(false);
+        $documentAllowanceCharge = null;
+
+        foreach($invoice['line_items'] as $item) {
+            if($item['discount'] != 0) {
+                $documentAllowanceCharge[] = (new \NumNum\UBL\AllowanceCharge())
+                    ->setChargeIndicator(false)
+                    ->setAllowanceChargeReason('Discount')
+                    ->setAmount($calc->getDiscount($item))
+                    ->setTaxCategory($this->allowanceTaxCategory($item));
+            }
+        }
+
+        if($invoice['freight_cost']) {
+            $documentAllowanceCharge[] = (new \NumNum\UBL\AllowanceCharge())
+                ->setChargeIndicator(false)
+                ->setAllowanceChargeReason('Shipping')
+                ->setAmount(floatval($invoice['freight_cost']))
+                ->setTaxCategory($this->allowanceTaxCategory());
+        }
+
+        return $documentAllowanceCharge;
+    }
+
     // Fix me: Get real taxIncluded value for invoice (from invoice sales_type)
     public function invoiceLines() {
         $invoice = $this->getInvoice();
@@ -293,6 +360,14 @@ class XMLInvoice extends Model
 
             $classifiedTaxCategory = $this->itemTaxCategory($item);
 
+            $allowanceCharge = null;
+            if($item['discount'] != 0) {
+                $allowanceCharge = (new \NumNum\UBL\AllowanceCharge())
+                    ->setChargeIndicator(false)
+                    ->setAllowanceChargeReason('discount')
+                    ->setAmount($calc->getDiscount($item));
+            }
+
             // Product
             $productItem = (new \NumNum\UBL\Item())
                 ->setName($item['stock_id'])
@@ -300,7 +375,7 @@ class XMLInvoice extends Model
                 ->setSellersItemIdentification($trn)
                 ->setClassifiedTaxCategory($classifiedTaxCategory);
 
-            $invoiceLines[] = (new \NumNum\UBL\InvoiceLine())
+            $invoiceLines[$item['id']] = (new \NumNum\UBL\InvoiceLine())
                 ->setId($item['id'])
                 ->setItem($productItem)
                 ->setInvoicePeriod($invoicePeriod)
@@ -309,6 +384,10 @@ class XMLInvoice extends Model
                 ->setUnitCode($item_unit)
                 ->setInvoicedQuantity($item['qty_dispatched'])
                 ->setLineExtensionAmount($lineExtAmount);
+
+            if($allowanceCharge) {
+                $invoiceLines[$item['id']]->setAllowanceCharge($allowanceCharge);
+            }
         }
 
         return $invoiceLines;
@@ -316,18 +395,21 @@ class XMLInvoice extends Model
 
     public function legalMonetaryTotal() {
         $invoice = $this->getInvoice();
+        $calc = new Calc;
+        $calc->setInvoice($this->getInvoice())->setTaxIncluded(false);
 
-        $line_ext_amount = $invoice['sub_total'];
+        $line_ext_amount = floatval($invoice['sub_total']) - floatval($invoice['freight_cost']);
         $payable_amount = $invoice['display_total'];
         $tax_total = $invoice['tax_total'];
         $tax_inclusive_amount = $invoice['display_total'];
         $tax_exclusive_amount = $invoice['display_total'] - $tax_total;
+        $allowanceTotal = $calc->allowanceTotal();
 
         $legalMonetaryTotal = (new \NumNum\UBL\LegalMonetaryTotal())
             ->setLineExtensionAmount($line_ext_amount)
             ->setTaxExclusiveAmount($tax_exclusive_amount)
             ->setTaxInclusiveAmount($tax_inclusive_amount)
-            ->setAllowanceTotalAmount(0)
+            ->setAllowanceTotalAmount($allowanceTotal)
             ->setPayableAmount($payable_amount);
 
         return $legalMonetaryTotal;
@@ -535,9 +617,21 @@ class XMLInvoice extends Model
     }
 
     // QR code hash
-    // Fix me: get real QR code hash
     public function getQR() {
-        $content = $this->getBusiness()->id;
+        //$content = $this->getBusiness()->id;
+        $invoice = $this->getInvoice();
+
+        $qr = new \App\ZatcaQR(
+            $invoice['cust_ref'], 
+            strval($invoice['customer']['tax_id']), 
+            $invoice['order_date'], 
+            $invoice['display_total'], 
+            $invoice['tax_total']
+        );
+
+        $qr->setIsEncoded(false);
+        $content = $qr->getQRCode();
+
         return base64_encode(hash('sha512', $content));
     }
 
@@ -548,8 +642,9 @@ class XMLInvoice extends Model
 
         $dt = \Carbon\Carbon::parse($invoice['order_date'])->format('Y-m-d');
         $tm = time();
+        $invoice_ref = str_replace('/', '_', $invoice['ref']);
+        $filename = "{$business->trn}_{$dt}T{$tm}_{$invoice_ref}.xml";
 
-        $filename = "{$business->trn}_{$dt}T{$tm}_{$invoice['ref']}.xml";
         return $filename;
     }
 

@@ -8,6 +8,7 @@ use App\McledgerQrCode;
 class ZatcaQR {
 
     private $seller_name, $tax_number, $date, $total_amount, $tax_amount;
+    private $is_encoded;
 
     public function __construct(string $seller_name, string $tax_number, string $date, $total_amount, $tax_amount)
     {
@@ -18,15 +19,21 @@ class ZatcaQR {
         $this->tax_amount = $tax_amount;
     }
 
+    public function setIsEncoded(bool $is_encoded): ZatcaQR {
+        $this->is_encoded = $is_encoded;
+        return $this;
+    }
+
     private function generateQRCode()
     {
+        $scale = 5;
         $QRCodeAsBase64 = McledgerQrCode::fromArray([
             $this->seller_name, // seller name        
             $this->tax_number, // seller tax number
             $this->date, // invoice date as Zulu ISO8601 @see https://en.wikipedia.org/wiki/ISO_8601
             $this->total_amount, // invoice total amount
             $this->tax_amount // invoice tax amount
-        ])->render();
+        ])->render($scale, $this->is_encoded);
 
         return $QRCodeAsBase64;
     }

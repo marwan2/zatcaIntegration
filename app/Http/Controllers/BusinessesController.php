@@ -12,6 +12,42 @@ class BusinessesController extends Controller
         view()->share('businesses', $businesses);
     }
 
+    public function index(Request $req) {
+        $businesses = new Business;
+        $businesses = $businesses->paginate(10);
+
+        return view('businesses.index', compact('businesses'));
+    }
+
+    public function create() {
+        return view('businesses.create');
+    }
+
+    public function store(Request $req) {
+        $this->validate($req, Business::$rules);
+
+        $data = $req->all();
+        $business = Business::create($data);
+        
+        session()->flash('flash_message', 'Business created successfully');
+        return redirect()->to('businesses');
+    }
+
+    public function edit($id) {
+        $business = Business::findOrFail($id);
+        return view('businesses.edit', compact('business'));
+    }
+
+    public function update($id, Request $req) {
+        $this->validate($req, Business::$rules);
+        $data = $req->all();
+        $record = Business::findOrFail($id);
+        $record->update($data);
+
+        session()->flash('flash_message', 'Business updated successfully');
+        return redirect('businesses');
+    }
+
     public function invoices(Request $req) {
         $invoices = null;
         $business = null;
@@ -24,14 +60,18 @@ class BusinessesController extends Controller
                     'Content-Type' => 'application/json',
                     'accept' => 'application/json',
                     'X-PREFIX' => $business->xprefix,
-                    'AUTH-TOKEN' => $business->auth_token,
+                    'AUTH-TOKEN' => $business->getAuthToken(),
                 ]
             ]);
 
-            $response = $client->request('GET', 'sales/10?page=1&limit=100');
-            $data = $response->getBody();
-            $invoices = json_decode($data->getContents(), 1);
-            $invoices = $invoices['data']['list'] ?? [];
+            try {
+                $response = $client->request('GET', 'sales/10?page=1&limit=50');
+                $data = $response->getBody();
+                $invoices = json_decode($data->getContents(), 1);
+                $invoices = $invoices['data']['list'] ?? [];
+            } catch (\Exception $e) {
+                dd($e);
+            }
         }
 
     	return view('businesses.invoices', compact('invoices', 'business'));
@@ -43,9 +83,20 @@ class BusinessesController extends Controller
             $business = Business::findOrFail($business_id);
             $invoice = \App\Invoice::getInvoice($trans_no, $business);
 
+            $invoiceDB = \App\Invoice::whereTrans_no($trans_no)->whereBusiness_id($business->id)->whereTrans_type('invoice')->first();
+            if(!$invoiceDB) {
+                $invoiceDB = \App\Invoice::create([
+                    'trans_type'=>'invoice',
+                    'trans_no'=>$trans_no,
+                    'business_id'=>$business->id,
+                    'uuid'=>\App\Invoice::generateUUID(),
+                ]);
+            }
+
             $inv = new \App\XMLInvoice;
             $inv->setBusiness($business);
             $inv->setInvoice($invoice);
+            $inv->setInvoiceInDB($invoiceDB);
             $inv->setNo($trans_no);
 
             $xml = $inv->getXML();
@@ -133,6 +184,47 @@ class BusinessesController extends Controller
             $qrCode = '';
             $qrCode = $qr->getQRCode();
             return view('businesses.invoice', compact('invoice', 'business', 'qrCode'));
+        }
+        return 'Missing params.';
+    }
+
+    public function reporting(Request $req, $business_id, $trans_no) {
+        if($business_id && $trans_no) {
+            $business = Business::findOrFail($business_id);
+            $invoice = \App\Invoice::getInvoice($trans_no, $business);
+            $invoice['trans_no'] = $trans_no;
+
+            // Generate
+            $invoiceDB = \App\Invoice::whereTrans_no($trans_no)->whereBusiness_id($business->id)->whereTrans_type('invoice')->first();
+            if(!$invoiceDB) {
+                $invoiceDB = \App\Invoice::create([
+                    'trans_type'=>'invoice',
+                    'trans_no'=>$trans_no,
+                    'business_id'=>$business->id,
+                    'uuid'=>\App\Invoice::generateUUID(),
+                ]);
+            }
+
+            $inv = new \App\XMLInvoice;
+            $inv->setBusiness($business);
+            $inv->setInvoice($invoice);
+            $inv->setInvoiceInDB($invoiceDB);
+            $inv->setNo($trans_no);
+            $xml = $inv->getXML();
+
+            // Save XML file
+            $file = $inv->fileName();
+            $invoice_path = public_path(\App\SimpleInvoice::$base_dir) . '/'.$file;
+            $dom = new \DOMDocument;
+            $dom->loadXML($xml);
+            $dom->save($invoice_path);
+
+            dd($invoice_path);
+            // Sign
+            exec('fatoora -invoice ' . $invoice_path .' -sign', $output);
+            dd($output);
+
+            // Call reporting API
         }
         return 'Missing params.';
     }

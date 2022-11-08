@@ -8,6 +8,8 @@ use PDF;
 
 class Invoice extends Model
 {
+    protected $table = "invoices";
+    protected $guarded = [];
     public $business;
 
     // Invoice Type codes for KSA
@@ -52,6 +54,10 @@ class Invoice extends Model
         return url('invoices/'.$this->business->id.'/'.$trans_no);
     }
 
+    public function reporting_url($trans_no) {
+        return url('invoices/'.$this->business->id.'/reporting/'.$trans_no);
+    }
+
     public function pdf_filename($trans_no, $with_path=true) {
         $inc = md5($this->business->id);
         $name = "pdf{$inc}_invoice_{$trans_no}.pdf";
@@ -72,7 +78,7 @@ class Invoice extends Model
                 'Content-Type' => 'application/json',
                 'accept' => 'application/json',
                 'X-PREFIX' => $business->xprefix,
-                'AUTH-TOKEN' => $business->auth_token,
+                'AUTH-TOKEN' => $business->getAuthToken(),
             ]
         ]);
 
@@ -94,7 +100,7 @@ class Invoice extends Model
                 'Content-Type' => '*/*',
                 'accept' => '*/*',
                 'X-PREFIX' => $business->xprefix,
-                'AUTH-TOKEN' => $business->auth_token,
+                'AUTH-TOKEN' => $business->getAuthToken(),
             ]
         ]);
 
@@ -115,7 +121,7 @@ class Invoice extends Model
                 'Content-Type' => 'application/json',
                 'accept' => 'application/json',
                 'X-PREFIX' => $business->xprefix,
-                'AUTH-TOKEN' => $business->auth_token,
+                'AUTH-TOKEN' => $business->getAuthToken(),
             ]
         ]);
 

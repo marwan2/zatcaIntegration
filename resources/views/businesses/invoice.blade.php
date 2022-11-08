@@ -3,14 +3,9 @@
 	$inv = new Invoice;
 	$inv->setBusiness($business);
 @endphp
-@extends('layout')
+@extends('layouts.master')
 
 @section('content')
-<style>
-	.btn { padding: 4px 6px; color: #fff; background: #0e2daa; font-family: sans-serif; text-decoration: none; }
-	.btn:hover { background: #ff00aa; color: #fff; }
-	.btn:active { background: #fa0a00; color: #fff; }
-</style>
 	<h3>Business: <a href="{{url('invoices?business_id='.$business->id)}}">{{$business->name}}</a></h3>
 	<hr>
 	@if($invoice)
@@ -39,12 +34,14 @@
 			</tbody>
 		</table>
 		<hr>
-		<a href="{{$inv->template_url($invoice['trans_no'])}}" class="btn" target="_blank">Template</a>
-		<a href="{{$inv->pdf_url($invoice['trans_no'])}}" class="btn" target="_blank">PDF</a>
-		<a href="{{$inv->view_url($invoice['trans_no'])}}" class="btn" target="_blank">View Invoice</a>
-		<a href="{{$inv->xml_url($invoice['trans_no'])}}" class="btn" target="_blank">Generate XML</a>
-		<a href="{{$inv->xml_file_url($invoice['trans_no'])}}" class="btn" target="_blank">XML File</a>
-		<a href="{{$inv->encode_xml_url($invoice['trans_no'])}}" class="btn" target="_blank">Base64 Encode</a>
+		<a href="{{$inv->template_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">Template</a>
+		<a href="{{$inv->pdf_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">PDF</a>
+		<a href="{{$inv->view_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">View Invoice</a>
+		<a href="{{$inv->xml_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">Generate XML</a>
+		<a href="{{$inv->xml_file_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">XML File</a>
+		<a href="{{$inv->encode_xml_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">Base64 Encode</a>
+
+		<a href="{{$inv->reporting_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">Generate, Sign & Send to Zatca</a>
 
 		<br><br>
 		<h3>QR code</h3>

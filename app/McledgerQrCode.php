@@ -53,12 +53,16 @@ class McledgerQrCode
      *
      * @return string
      */
-    public function render($scale = 5): string
+    public function render($scale = 5, $base64 = true): string
     {
         $options = new QROptions([
               'scale' => $scale,
             ]
         );
-        return (new QRCode($options))->render($this->toBase64());
+
+        if($base64) {
+            return (new QRCode($options))->render($this->toBase64());
+        }
+        return (new QRCode($options))->render($this->toTLV());
     }
 }

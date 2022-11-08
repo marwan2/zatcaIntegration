@@ -9,14 +9,17 @@
     "license": "MIT",
     "require": {
         "php": "^7.2.5|^8.0",
+        "chillerlan/php-qrcode": "^3.4",
         "fideloper/proxy": "^4.4",
         "fruitcake/laravel-cors": "^2.0",
         "guzzlehttp/guzzle": "^7.5",
         "laravel/framework": "^7.29",
         "laravel/tinker": "^2.5",
+        "laravel/ui": "2.x",
+        "laravelcollective/html": "^6.3",
+        "laravelcollective/remote": "^6.2",
         "marwan2/ubl-invoice": "dev-master",
-        "niklasravnsborg/laravel-pdf": "^4.1",
-        "chillerlan/php-qrcode": "^3.4"
+        "niklasravnsborg/laravel-pdf": "^4.1"
     },
     "require-dev": {
         "facade/ignition": "^2.0",

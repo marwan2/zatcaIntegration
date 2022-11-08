@@ -31,25 +31,25 @@ This is to integrate McLedger Platform with ZATCA KSA Invoicing Specifications.
 	- OTH: Other OD
 
  # Customer (Customer Party)
- - Identification ID
- - Buyer Registration Name (TRN)
- - Buyer Address - District field, minimum limit is 1 character and maximum limit is 127 characters.
- - Buyer Address Additional number (PlotIdentification) must be 4 digits if it exists.
- - If customer country SA, this fields required:
- 	- Legal name
- 	- Street name
- 	- Plot Identification: (Additional number)
- 	- Additional street name
- 	- Building number
- 	- Neighborhood
- 	- City name
- 	- Postal code
- 	- District
- 	- Country ISO2 Code
- 	- Already we have (Email, Phone, Fax, Customer name)
- 	- Tax Schema (default 'VAT')
- 	- Identification scheme
- 	  default now ('OTH') with value 'CustomerID'
+	 - Identification ID
+	 - Buyer Registration Name (TRN)
+	 - Buyer Address - District field, minimum limit is 1 character and maximum limit is 127 characters.
+	 - Buyer Address Additional number (PlotIdentification) must be 4 digits if it exists.
+	 - If customer country SA, this fields required:
+	 	- Legal name
+	 	- Street name
+	 	- Plot Identification: (Additional number)
+	 	- Additional street name
+	 	- Building number
+	 	- Neighborhood
+	 	- City name
+	 	- Postal code
+	 	- District
+	 	- Country ISO2 Code
+	 	- Already we have (Email, Phone, Fax, Customer name)
+	 	- Tax Schema (default 'VAT')
+	 	- Identification scheme
+	 	  default now ('OTH') with value 'CustomerID'
 
 # Invoice Lines
 	- Get tax_included per single invoice
@@ -82,3 +82,5 @@ This is to integrate McLedger Platform with ZATCA KSA Invoicing Specifications.
 		- S: standard rated
 		- E: Exempt 
 		- Z: Zero rated
+
+ZeroRated items: a record added to ERP table "trans_tax_details"
