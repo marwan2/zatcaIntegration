@@ -8,11 +8,11 @@
 @section('content')
 	@if($businesses)
 		<legend>Select Business</legend>
-		<ul class="navbar-nav">
+		<div class="navbar-nav d-inline-block mb-3">
 		@foreach($businesses as $bs)
-			<li class="nav-item"><a class="btn {{(Request::get('business_id')==$bs->id) ? 'btn-primary':''}}" href="{{url('invoices?business_id='.$bs->id)}}">{{$bs->name}}</a></li>
+			<a class="btn {{(Request::get('business_id')==$bs->id) ? 'btn-primary':'btn-light'}}" href="{{url('invoices?business_id='.$bs->id)}}">{{$bs->name}}</a>
 		@endforeach
-		</ul>
+		</div>
 	@endif
 	@if($invoices)
 		<table border="1" cellpadding="6" style="border-collapse: collapse;">

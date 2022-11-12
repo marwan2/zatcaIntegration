@@ -121,7 +121,6 @@ class XMLInvoice extends Model
         }
 
         //$invoiceXML->setExtensions($extensions);
-
         $generator = new \NumNum\UBL\Generator();
         $outputXMLString = $generator->invoice($invoiceXML, $curr_code);
 

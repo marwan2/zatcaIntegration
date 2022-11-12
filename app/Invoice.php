@@ -18,6 +18,9 @@ class Invoice extends Model
     const DEBIT_NOTE = 383;
     const SELF_BILLING_INVOICE = 389;
 
+    const SANDBOX_URL = "https://gw-apic-gov.gazt.gov.sa/e-invoicing/developer-portal";
+    const PRODUCTION_URL = "https://gw-apic-gov.gazt.gov.sa/e-invoicing/developer-portal";
+
     public function getBusiness() {
         return $this->business;
     }

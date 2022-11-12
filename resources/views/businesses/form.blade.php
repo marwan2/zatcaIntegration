@@ -13,10 +13,6 @@
 				{!!Form::text('legal_registration_name', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 			<div class="col-md-6 form-group">
-				<label class="col-form-label">Serial number</label>
-				{!!Form::text('serial_number', null, ['class'=>'form-control', 'required'=>''])!!}
-			</div>
-			<div class="col-md-6 form-group">
 				<label class="col-form-label">Organization identifier (TRN)</label>
 				{!!Form::text('trn', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
@@ -29,16 +25,12 @@
 				{!!Form::text('country_iso2', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 			<div class="col-md-6 form-group">
-				<label class="col-form-label">Invoice type</label>
-				{!!Form::text('invoice_type', null, ['class'=>'form-control', 'required'=>''])!!}
-			</div>
-			<div class="col-md-6 form-group">
 				<label class="col-form-label">Location address</label>
 				{!!Form::text('location_address', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 			<div class="col-md-6 form-group">
-				<label class="col-form-label">Industry business category</label>
-				{!!Form::text('business_category', null, ['class'=>'form-control', 'required'=>''])!!}
+				<label class="col-form-label">OTP</label>
+				{!!Form::text('otp', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 		</div>
 	</div>

@@ -7,7 +7,7 @@
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" type="text/css" rel="stylesheet">
 </head>
 <body>
-	<nav class="navbar navbar-expand-lg navbar-success bg-dark mb-3">
+	<nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
 	  <a class="navbar-brand" href="{{url('/')}}">McLedger Zatca Integration</a>
 	  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#nvb" aria-controls="nvb" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
 	  <div class="collapse navbar-collapse" id="nvb">
@@ -23,11 +23,26 @@
 	      </li>
 	    </ul>
 	    <form class="form-inline my-2 my-lg-0">
-	      <a href="{{url('businesses/create')}}" class="btn btn-success my-2 my-sm-0">New Integration</a>
 	    </form>
+	    <ul class="navbar-nav ml-auto">
+            @guest
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
+                </li>
+                @if (Route::has('register'))
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
+                    </li>
+                @endif
+            @else
+	      		<li><a href="{{url('businesses/create')}}" class="btn btn-outline-success">New Business Integration</a></li>
+                <li><a class="btn" href="#">{{ Auth::user()->name }}</a></li>
+                <li><a class="btn btn-outline-info" href="{{route('logout')}}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">{{ __('Logout') }}</a></li>
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
+            @endguest
+        </ul>
 	  </div>
 	</nav>
-	
 	<main class="container">
 		@if ($errors->any())
             <ul class="alert alert-danger">
@@ -44,8 +59,8 @@
 		@endif
 		@yield('content')
 	</main>
-	<footer>
-		
+	<footer class="w-100 bg-light mt-5 p-2 text-center text-muted">
+		<small>By McLedger</small>
 	</footer>
 </body>
 </html>
