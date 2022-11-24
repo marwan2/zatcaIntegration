@@ -13,12 +13,8 @@
 				{!!Form::text('legal_registration_name', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 			<div class="col-md-6 form-group">
-				<label class="col-form-label">Organization identifier (TRN)</label>
+				<label class="col-form-label">Tax Registration No. (TRN)</label>
 				{!!Form::text('trn', null, ['class'=>'form-control', 'required'=>''])!!}
-			</div>
-			<div class="col-md-6 form-group">
-				<label class="col-form-label">Organization unit name</label>
-				{!!Form::text('organization_unit_name', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 			<div class="col-md-6 form-group">
 				<label class="col-form-label">Country ISO2</label>
@@ -29,7 +25,7 @@
 				{!!Form::text('location_address', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 			<div class="col-md-6 form-group">
-				<label class="col-form-label">OTP</label>
+				<label class="col-form-label">OTP (From ZACTA Portal)</label>
 				{!!Form::text('otp', null, ['class'=>'form-control', 'required'=>''])!!}
 			</div>
 		</div>

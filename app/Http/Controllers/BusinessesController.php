@@ -28,31 +28,60 @@ class BusinessesController extends Controller
         $data = $req->all();
         $business = Business::create($data);
         
-        session()->flash('flash_message', 'Business created successfully');
-        return redirect()->to('businesses');
+        session()->flash('flash_message', 'Business created successfully, you can start onboarding process.');
+        return redirect()->to('businesses/'.$business->id);
     }
 
+    /*
+        Show Business Integration Details
+    */
     public function show($id) {
         $business = Business::findOrFail($id);
+        return view('businesses.show', compact('business'));
+    }
 
-        // Set CSR config file
-        $csr_content = $business->getCsrContent();
+    /*
+        Zatca Business Onboarding
+        - Generate CSR
+        - Obtain Compliance CSID
+        - Obtain Production CSID
+    */
+    public function onboarding(Request $req, $id) {
+        $business = Business::findOrFail($id);
+        $result = true;
+        if(!$business->csrExists()) {
+            // Set CSR config file
+            $csr_content = $business->getCsrContent();
+            $privateKey = $business->getPrivateKey();
+            $result = $business->generateCSR($csr_content, $privateKey);
+        }
 
-        $privateKey = $business->getPrivateKey();
-
-        $result = $business->generateCSR($csr_content, $privateKey);
-
-        if($result)
-        {
+        if($result) {
             $api = new \App\API;
             $api->setBusiness($business);
-
             $api->issueComplianceCertificate();
-
             $api->issueProductionCertificate();
         }
 
-        dd($csr);
+        if($req->ajax()) {
+            return json_encode([
+                'status'=>true, 
+                'message'=>'Buiness onboarding process completed successfully.'
+            ]);
+        }
+        dd($result);
+    }
+
+    /*
+        Zatca Production Certificate Renewal
+    */
+    public function certificateRenewal($business_id) {
+        $business = Business::findOrFail($business_id);
+
+        $api = new \App\API;
+        $api->setBusiness($business);
+        $result = $api->productionCertificateRenewal();
+        return $result;
     }
 
     public function edit($id) {
@@ -68,5 +97,23 @@ class BusinessesController extends Controller
 
         session()->flash('flash_message', 'Business updated successfully');
         return redirect('businesses');
+    }
+
+    public function generateCertPem($business_id) {
+        $business = Business::findOrFail($business_id);
+
+        $CCSIDbase64 = $business->getCCSID('ccsid');
+        $PCSIDbase64 = $business->getPCSID('binarySecurityToken');
+
+        if(!$CCSIDbase64) { 
+            throw new \Exception('Compliance CSID is missing');
+        }
+        if(!$PCSIDbase64) { 
+            throw new \Exception('Production CSID is missing');
+        }
+
+        $output = $business->generateCertificatePEM($CCSIDbase64, 'compliance');
+        $output = $business->generateCertificatePEM($PCSIDbase64, 'production');
+        return $output;
     }
 }

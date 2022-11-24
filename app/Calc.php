@@ -15,6 +15,7 @@ class Calc extends Model
 
     public function setInvoice($invoice): Calc {
         $this->invoice = $invoice;
+        $this->taxIncluded = $invoice['tax_included'] ?? true;
         return $this;
     }
 
@@ -36,7 +37,28 @@ class Calc extends Model
     	return $total;
     }
 
+    public function itemTaxRate($stock_item) {
+        if(is_array($stock_item)) {
+            $stock_item = (object) $stock_item;
+        }
+
+        $item_tax_name = $stock_item->tax_type_name;
+        $taxKey = array_search($stock_item->item_tax_type_id, array_column($this->taxes, 'id'));
+        $taxes = $this->taxes[$taxKey]['taxes'] ?? null;
+
+        if($taxes) {
+            $row_key = array_search($item_tax_name, array_column($taxes, 'name'));
+            if(isset($taxes[$row_key])) {
+                return $taxes[$row_key]['rate'] ?? 0;
+            }
+        }
+        return 0;
+    }
+
     public function getLineTaxRate($stock_item) {
+        if(is_array($stock_item)) {
+            $stock_item = (object) $stock_item;
+        }
         if (isset($stock_item->tax)) {
             if ($this->taxIncluded) {
                 $rate = $stock_item->tax == '0' ? 0 : round(100 * $stock_item->tax / ($stock_item->price - $stock_item->tax), 0);
@@ -48,7 +70,7 @@ class Calc extends Model
         }
 
         $taxList = $this->taxes;
-        $item_tax_type_id = $stock_item->tax_type;
+        $item_tax_type_id = $stock_item->item_tax_type_id;
         $item_tax_name = $stock_item->tax_type_name;
         $taxKey = array_search($item_tax_type_id, array_column($taxList, 'id'));
         $taxes = $taxList[$taxKey]['taxes'] ?? null;
@@ -62,10 +84,14 @@ class Calc extends Model
         return 0;
     }
 
-    public function calculateItemTax($stock_item, $item_price) {
+    public function calculateItemTax($stock_item, $item_price=null) {
         $tax_rate = $this->getLineTaxRate($stock_item);
         $tax_rate = (floatval($tax_rate) / 100);
         $tax_amount = 0;
+
+        if(!$item_price) {
+            $item_price = $this->getLineTotal($stock_item);
+        }
 
         if(!$this->taxIncluded) {
             $tax_amount = (($item_price) * $tax_rate);
@@ -97,6 +123,9 @@ class Calc extends Model
     }
 
     public function getLineTotal($stock_item) {
+        if(is_array($stock_item)) {
+            $stock_item = (object) $stock_item;
+        }
         $quantity = $stock_item->qty_dispatched;
         $discount = $quantity * $stock_item->price * $stock_item->discount;
         $line_total = $quantity * $stock_item->price * (1 - $stock_item->discount);

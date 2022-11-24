@@ -21,6 +21,9 @@
 	      <li class="nav-item">
 	        <a class="nav-link" href="{{url('invoices')}}">Invoices</a>
 	      </li>
+	      <li class="nav-item">
+	        <a class="nav-link" href="{{url('xml/tests')}}">XML Testing</a>
+	      </li>
 	    </ul>
 	    <form class="form-inline my-2 my-lg-0">
 	    </form>

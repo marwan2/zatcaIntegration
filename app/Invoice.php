@@ -29,6 +29,10 @@ class Invoice extends Model
         $this->business = $business;
     }
 
+    public function logs() {
+        return $this->hasMany(ReportingLog::class);
+    }
+
     public function url($trans_no) {
         return url("invoices/{$this->business->id}/show/{$trans_no}");
     }
@@ -37,8 +41,8 @@ class Invoice extends Model
         return url("invoices/{$trans_no}/{$this->business->id}/pdf");
     }
 
-    public function xml_url($trans_no) {
-        return url('invoices/'.$this->business->id.'/xml/'.$trans_no.'?xml');
+    public function xml_url($trans_no, $signed=0) {
+        return url('invoices/'.$this->business->id.'/xml/'.$trans_no.'?xml&signed='.$signed);
     }
 
     public function xml_file_url($trans_no) {
@@ -61,6 +65,10 @@ class Invoice extends Model
         return url('invoices/'.$this->business->id.'/reporting/'.$trans_no);
     }
 
+    public function compliance_url($trans_no) {
+        return url('invoices/'.$this->business->id.'/compliance/'.$trans_no);
+    }
+
     public function pdf_filename($trans_no, $with_path=true) {
         $inc = md5($this->business->id);
         $name = "pdf{$inc}_invoice_{$trans_no}.pdf";
@@ -70,7 +78,7 @@ class Invoice extends Model
         return $name;
     }
 
-    public static function getInvoice($trans_no, $business=null) {
+    public static function getInvoiceFromErp($trans_no, $business=null) {
     	if(!$business) {
     		return null;
     	}
@@ -113,6 +121,19 @@ class Invoice extends Model
         return $invoice;
     }
 
+    public static function getInvoiceFromDb($trans_no, $business) {
+        $invoice = self::whereTrans_no($trans_no)->whereBusiness_id($business->id)->whereTrans_type('invoice')->first();
+        if(!$invoice) {
+            $invoice = self::create([
+                'trans_type'    => 'invoice',
+                'trans_no'      => $trans_no,
+                'business_id'   => $business->id,
+                'uuid'          =>self::generateUUID(),
+            ]);
+        }
+        return $invoice;
+    }
+
     public static function getTaxforItems($business=null) {
         if(!$business) {
             return null;
@@ -128,11 +149,16 @@ class Invoice extends Model
             ]
         ]);
 
-        $response = $client->request('GET', 'inventory/taxforitems');
-        $data = $response->getBody();
-        $res = json_decode($data->getContents(), 1);
-        $res = $res['data'] ?? null;
-        return $res;
+        try {
+            $response = $client->request('GET', 'inventory/item-tax-types');
+            $data = $response->getBody();
+            $res = json_decode($data->getContents(), 1);
+            $res = $res['data'] ?? null;
+            return $res;
+        } catch(\Exception $e) {
+            print($e->getMessage());
+        }
+        return null;
     }
 
     public function saveInvoicePDF($trans_no) {

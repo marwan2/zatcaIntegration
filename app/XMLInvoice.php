@@ -25,6 +25,7 @@ class XMLInvoice extends Model
 
     public function setNo($trans_no) {
         $this->trans_no = $trans_no;
+        return $this;
     }
 
     public function getBusiness() {
@@ -33,6 +34,7 @@ class XMLInvoice extends Model
 
     public function setBusiness($business) {
         $this->business = $business;
+        return $this;
     }
 
     public function getInvoice() {
@@ -41,10 +43,12 @@ class XMLInvoice extends Model
 
     public function setInvoice($invoice) {
         $this->invoice = $invoice;
+        return $this;
     }
 
     public function setInvoiceInDB($invoiceInDB) {
         $this->invoiceInDB = $invoiceInDB;
+        return $this;
     }
 
     public function getXML() {
@@ -70,6 +74,11 @@ class XMLInvoice extends Model
         $docReference = (new \NumNum\UBL\ContractDocumentReference())->setId($invoice['ref']);
         $additionalDocRef = $this->additionalDocumentReference();
         $invoice_uuid = $this->invoiceInDB->uuid ?? \App\Invoice::generateUUID();
+        /* After receiving error from ZATCA
+            "UUID provided in the invoice doesn't match UUID in the provided Request",
+            So I set single UUID per all invoices generated, and it didn't show this error again
+        */
+        $invoice_uuid = env('EGS_UUID'); 
 
         $documentSignatures = (new \App\Signature())->getDocSignatures();
         $ublExtension = (new \NumNum\UBL\Extensions\UBLExtension())
@@ -100,6 +109,7 @@ class XMLInvoice extends Model
             ->setPaymentMeans($paymentMeans)
             ->setProfileID('reporting:1.0')
             ->setSignature($signature)
+            ->setExtensions('SET_UBL_EXTENSIONS_STRING')
             //->setNote($this->clean($invoice['comments']))
         ;
 
@@ -217,7 +227,7 @@ class XMLInvoice extends Model
             ->setPostalZone($postal_zone)
             ->setCountry($customer_country);
 
-        // Fix me: get real data for customers from SA
+        // Fix me: get real data for customers
         if($country_iso2 == 'SA') {
             $district = 'ABC Dist';
             $additionalNo = '4574';
@@ -299,7 +309,7 @@ class XMLInvoice extends Model
         }
 
         $calc = new Calc;
-        $calc->setInvoice($this->getInvoice())->setTaxIncluded(false);
+        $calc->setInvoice($this->getInvoice());
         $documentAllowanceCharge = null;
 
         foreach($invoice['line_items'] as $item) {
@@ -323,13 +333,12 @@ class XMLInvoice extends Model
         return $documentAllowanceCharge;
     }
 
-    // Fix me: Get real taxIncluded value for invoice (from invoice sales_type)
     public function invoiceLines() {
         $invoice = $this->getInvoice();
         $trn = $this->getBusiness()->trn;
 
         $calc = new Calc;
-        $calc->setInvoice($this->getInvoice())->setTaxIncluded(false);
+        $calc->setInvoice($this->getInvoice());
         $taxes = Invoice::getTaxforItems($this->getBusiness());
         if($taxes) {
             $calc->setTaxes($taxes);
@@ -340,6 +349,7 @@ class XMLInvoice extends Model
             $item_unit = (isset($item['units']) && $item['units']=='each') ? \NumNum\UBL\UnitCode::PIECE : \NumNum\UBL\UnitCode::UNIT;
             $item_unit = 'PCE';
             $lineExtAmount = $calc->calcItemTotal($item);
+            $itemTotalTax = $calc->calculateItemTax($item);
             $roundingAmount = $lineExtAmount + $item['tax'];
 
             // InvoicePeriod
@@ -354,10 +364,10 @@ class XMLInvoice extends Model
 
             // Invoice Line tax totals
             $lineTaxTotal = (new \NumNum\UBL\TaxTotal())
-                ->setTaxAmount($item['tax'])
+                ->setTaxAmount($itemTotalTax)
                 ->setRoundingAmount($roundingAmount);
 
-            $classifiedTaxCategory = $this->itemTaxCategory($item);
+            $classifiedTaxCategory = $this->itemTaxCategory($item, $calc);
 
             $allowanceCharge = null;
             if($item['discount'] != 0) {
@@ -395,7 +405,7 @@ class XMLInvoice extends Model
     public function legalMonetaryTotal() {
         $invoice = $this->getInvoice();
         $calc = new Calc;
-        $calc->setInvoice($this->getInvoice())->setTaxIncluded(false);
+        $calc->setInvoice($this->getInvoice());
 
         $line_ext_amount = floatval($invoice['sub_total']) - floatval($invoice['freight_cost']);
         $payable_amount = $invoice['display_total'];
@@ -585,8 +595,7 @@ class XMLInvoice extends Model
         return null;
     }
 
-    // Fix me: tax percent is not correct
-    public function itemTaxCategory($item) {
+    public function itemTaxCategory($item, Calc $calc) {
         $taxCatSchemeID = 'VAT';
         $taxScheme = (new \NumNum\UBL\TaxScheme())->setId($taxCatSchemeID);
 
@@ -600,16 +609,18 @@ class XMLInvoice extends Model
             $classified_id = 'Z';
         }
 
+        $tax_percent = $calc->itemTaxRate($item);
         $taxCat = (new \NumNum\UBL\ClassifiedTaxCategory())
             ->setId($classified_id)
             //->setName($item['tax_type_name'])
-            ->setPercent($item['tax'])
+            ->setPercent($tax_percent)
             ->setTaxScheme($taxScheme);
 
         return $taxCat;
     }
 
     // PIH, for first invoice hash of '0'
+    // Fix me: get correct PIH
     public function getPreviousInvoiceHash() {
         $content = '0';
         return base64_encode(hash('sha512', $content));
@@ -617,7 +628,6 @@ class XMLInvoice extends Model
 
     // QR code hash
     public function getQR() {
-        //$content = $this->getBusiness()->id;
         $invoice = $this->getInvoice();
 
         $qr = new \App\ZatcaQR(
@@ -645,6 +655,18 @@ class XMLInvoice extends Model
         $filename = "{$business->trn}_{$dt}T{$tm}_{$invoice_ref}.xml";
 
         return $filename;
+    }
+
+    public function signedFileName($filename) {
+        return str_replace('.xml', '_signed.xml', $filename);
+    }
+
+    public function xmlPath($signed=true) {
+        $filename = $this->fileName();
+        if($signed) {
+            $filename = $this->signedFileName($filename);
+        }
+        return public_path(self::$base_dir) . '/'.$filename;
     }
 
     public function fileAnchor($filename) {

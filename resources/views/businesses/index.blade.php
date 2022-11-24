@@ -22,7 +22,7 @@
 				@foreach($businesses as $bs)
 				<tr>
 					<td>{{$bs->id}}</td>
-					<td>{{$bs->name}}</td>
+					<td><a href="{{url('businesses/'.$bs->id)}}" class="btn">{{$bs->name}}</a></td>
 					<td>{{$bs->trn}}</td>
 					<td>{{$bs->xprefix}}</td>
 					<td>{{$bs->country_code}}</td>
@@ -30,6 +30,7 @@
 					<td nowrap="">
 						<a href="{{url('businesses/'.$bs->id.'/edit')}}" class="btn btn-warning">Edit</a>
 						<a href="{{url('invoices?business_id='.$bs->id)}}" class="btn btn-primary">Invoices</a>
+						<a href="{{route('csid.renewal', $bs->id)}}" class="btn btn-primary">PCSID Renewal</a>
 					</td>
 				</tr>
 				@endforeach

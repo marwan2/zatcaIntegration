@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\SimpleInvoice;
 use App\Business;
 use App\Invoice;
 
@@ -51,27 +50,29 @@ class InvoicesController extends Controller
         $invoice = null;
         if($business_id && $trans_no) {
             $business = Business::findOrFail($business_id);
-            $invoice = \App\Invoice::getInvoice($trans_no, $business);
-
-            $invoiceDB = \App\Invoice::whereTrans_no($trans_no)->whereBusiness_id($business->id)->whereTrans_type('invoice')->first();
-            if(!$invoiceDB) {
-                $invoiceDB = \App\Invoice::create([
-                    'trans_type'=>'invoice',
-                    'trans_no'=>$trans_no,
-                    'business_id'=>$business->id,
-                    'uuid'=>\App\Invoice::generateUUID(),
-                ]);
-            }
+            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
+            $invoiceDB = \App\Invoice::getInvoiceFromDb($trans_no, $business);
 
             $inv = new \App\XMLInvoice;
-            $inv->setBusiness($business);
-            $inv->setInvoice($invoice);
-            $inv->setInvoiceInDB($invoiceDB);
-            $inv->setNo($trans_no);
-
+            $inv->setBusiness($business)
+                ->setInvoice($invoice)
+                ->setInvoiceInDB($invoiceDB)
+                ->setNo($trans_no);
             $xml = $inv->getXML();
 
             if($req->has('xml')) {
+                if($req->has('signed') && $req->get('signed')) {
+                    $signing = new \App\Signing;
+                    $signing->setBusiness($business);
+                    list($signed_invoice_string, $invoice_hash, $qr) = $signing->signInvoice($xml, false);
+
+                    $path = $inv->xmlPath();
+                    $dom = new \DOMDocument;
+                    $dom->loadXML($signed_invoice_string);
+                    $dom->save($path);
+                    $xml = "<?xml version=\"1.0\" ?>\n" . $signed_invoice_string;
+                    echo $xml; return;
+                }
                 return $xml;
             }
 
@@ -81,14 +82,13 @@ class InvoicesController extends Controller
 
             if($req->has('file')) {
                 $file = $inv->fileName();
-                $path = public_path(\App\SimpleInvoice::$base_dir) . '/'.$file;
+                $path = public_path(\App\XMLInvoice::$base_dir) . '/'.$file;
                 $dom = new \DOMDocument;
                 $dom->loadXML($xml);
                 $dom->save($path);
 
                 $fileAnchor = $inv->fileAnchor($file);
                 return $fileAnchor;
-                //return response($path, 200)->header('Content-Type', 'application/xml');
             }
         }
         return $invoice;
@@ -96,13 +96,12 @@ class InvoicesController extends Controller
 
     public function validateXML(Request $req) {
         $file = $req->get('file');
-        $path = public_path(\App\SimpleInvoice::$base_dir) . '/'.$file;
+        $path = public_path(\App\XMLInvoice::$base_dir) . '/'.$file;
 
         $file_content = file_get_contents($path);
 
         $dom = new \DOMDocument;
         $inv = new \App\XMLInvoice;
-
         $dom->loadXML($file_content);
 
         $fileAnchor = $inv->fileAnchor($file);
@@ -119,7 +118,7 @@ class InvoicesController extends Controller
             $invoice = \App\Invoice::getInvoiceTemplate($trans_no, $business);
             print $invoice;
         }
-        return $invoice;
+        return;
     }
 
     public function getPDF($trans_no, $business_id) {
@@ -136,11 +135,11 @@ class InvoicesController extends Controller
         return '';
     }
 
-    public function showInvoice($business_id, $trans_no) 
-    {
+    public function showInvoice($business_id, $trans_no) {
         if($business_id && $trans_no) {
             $business = Business::findOrFail($business_id);
-            $invoice = \App\Invoice::getInvoice($trans_no, $business);
+            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
+            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($tran_no)->get();
             $invoice['trans_no'] = $trans_no;
 
             $qr = new \App\ZatcaQR(
@@ -151,9 +150,8 @@ class InvoicesController extends Controller
                 $invoice['tax_total']
             );
 
-            $qrCode = '';
             $qrCode = $qr->getQRCode();
-            return view('businesses.invoice', compact('invoice', 'business', 'qrCode'));
+            return view('invoices.invoice', compact('invoice', 'business', 'qrCode', 'logs'));
         }
         return 'Missing params.';
     }
@@ -161,49 +159,117 @@ class InvoicesController extends Controller
     public function reporting(Request $req, $business_id, $trans_no) {
         if($business_id && $trans_no) {
             $business = Business::findOrFail($business_id);
-            $invoice = \App\Invoice::getInvoice($trans_no, $business);
+            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
+            $invoiceDB = \App\Invoice::getInvoiceFromDb($trans_no, $business);
             $invoice['trans_no'] = $trans_no;
 
-            // Generate
-            $invoiceDB = \App\Invoice::whereTrans_no($trans_no)->whereBusiness_id($business->id)->whereTrans_type('invoice')->first();
-            if(!$invoiceDB) {
-                $invoiceDB = \App\Invoice::create([
-                    'trans_type'=>'invoice',
-                    'trans_no'=>$trans_no,
-                    'business_id'=>$business->id,
-                    'uuid'=>\App\Invoice::generateUUID(),
-                ]);
-            }
-
             $inv = new \App\XMLInvoice;
-            $inv->setBusiness($business);
-            $inv->setInvoice($invoice);
-            $inv->setInvoiceInDB($invoiceDB);
-            $inv->setNo($trans_no);
-            $xml = $inv->getXML();
+            $inv->setBusiness($business)
+                ->setInvoice($invoice)
+                ->setInvoiceInDB($invoiceDB)
+                ->setNo($trans_no);
+            $invoice_xml = $inv->getXML();
 
             // Save XML file
-            $file = $inv->fileName();
-            $invoice_path = public_path(\App\SimpleInvoice::$base_dir) . '/'.$file;
+            $invoice_path = public_path(\App\XMLInvoice::$base_dir) . '/' . $inv->fileName();
             $dom = new \DOMDocument;
-            $dom->loadXML($xml);
+            $dom->loadXML($invoice_xml);
             $dom->save($invoice_path);
 
-            dd($invoice_path);
-            // Sign
-            exec('fatoora -invoice ' . $invoice_path .' -sign', $output);
-            dd($output);
+            // Sign Invoice
+            $signing = new \App\Signing;
+            $signing->setBusiness($business);
+            list($signed_invoice_string, $invoice_hash, $qr) = $signing->signInvoice($invoice_xml, false);
+
+            // Encode Invoice
+            $signed_invoice_encoded = base64_encode($signed_invoice_string);
 
             // Call reporting API
+            $api = new \App\API;
+            $api->setBusiness($business);
+            $output = $api->reporting($signed_invoice_encoded, $invoice_hash);
+
+            if (isset($output['validationResults']) && isset($output['validationResults']['status']) == 'PASS') {
+                if(isset($output['clearanceStatus']) && $output['clearanceStatus'] == 'CLEARED') {
+                    print ('Invoice compliance passed successfully');
+                }
+            } else {
+                $msg = "Invoice is not complaint with ZATCA";
+                \Log::warning($msg);
+            }
+
+            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
+            \Log::info($output);
+            dd($output);
         }
-        return 'Missing params.';
+
+        $msg = 'Missing params on reporting invoice #' . $trans_no;
+        \Log::error($msg);
+        return $msg;
+    }
+
+    /**
+     * Check Invoice Compliance 
+     */
+    public function checkInvoiceCompliance(Request $req, $business_id=null, $trans_no=null) {
+        if($business_id && $trans_no) {
+            $business = Business::findOrFail($business_id);
+            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
+            $invoiceDB = \App\Invoice::getInvoiceFromDb($trans_no, $business);
+            $invoice['trans_no'] = $trans_no;
+
+            $inv = new \App\XMLInvoice;
+            $inv->setBusiness($business)
+                ->setInvoice($invoice)
+                ->setInvoiceInDB($invoiceDB)
+                ->setNo($trans_no);
+            $invoice_xml = $inv->getXML();
+
+            // Save XML file
+            $invoice_path = public_path(\App\XMLInvoice::$base_dir) . '/' . $inv->fileName();
+            $dom = new \DOMDocument;
+            $dom->loadXML($invoice_xml);
+            $dom->save($invoice_path);
+
+            // Sign Invoice
+            $signing = new \App\Signing;
+            $signing->setBusiness($business);
+            list($signed_invoice_string, $invoice_hash, $qr) = $signing->signInvoice($invoice_xml, false);
+
+            // Encode Invoice
+            $signed_invoice_encoded = base64_encode($signed_invoice_string);
+
+            // Call Compliance API
+            $api = new \App\API;
+            $api->setBusiness($business);
+            $api->setInvoice($invoiceDB);
+            $output = $api->invoiceCompliance($signed_invoice_encoded, $invoice_hash);
+            
+            if (isset($output['validationResults']) && isset($output['validationResults']['status']) == 'PASS') {
+                if(isset($output['clearanceStatus']) && $output['clearanceStatus'] == 'CLEARED') {
+                    print ('Invoice compliance passed successfully');
+                }
+            } else {
+                $msg = "Invoice is not complaint with ZATCA";
+                \Log::warning($msg);
+            }
+
+            // Save action to log table
+            \App\ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output);
+            \Log::info($output);
+            dd($output);
+        }
+
+        $msg = 'Missing params on check invoice compliance #' . $trans_no;
+        \Log::error($msg);
+        return $msg;
     }
 
 	public function encodeFile(Request $req) {
 		$file = $req->get('filename');
 		$file_encoded = '';
 		if($file) {
-			$file_encoded = base64_encode(file_get_contents(public_path(SimpleInvoice::$base_dir).'/'.$file));
+			$file_encoded = base64_encode(file_get_contents(public_path(XMLInvoice::$base_dir).'/'.$file));
 		}
 		return $file_encoded;
 	}
