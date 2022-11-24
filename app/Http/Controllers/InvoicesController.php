@@ -139,7 +139,7 @@ class InvoicesController extends Controller
         if($business_id && $trans_no) {
             $business = Business::findOrFail($business_id);
             $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
-            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($tran_no)->get();
+            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($trans_no)->get();
             $invoice['trans_no'] = $trans_no;
 
             $qr = new \App\ZatcaQR(
