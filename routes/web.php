@@ -24,6 +24,9 @@ Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('businesses/{business_id}/onboarding', 'BusinessesController@onBoarding')->name('onboarding');
 	Route::get('businesses/{business_id}/geneate-certificate-pem', 'BusinessesController@generateCertPem')->name('cert.pem');
 	Route::get('cert-download/{file}', 'HomeController@download');
+
+	Route::get('account', 'HomeController@showUser');
+	Route::get('account/refresh-token', 'HomeController@refreshToken');
 	Route::resource('businesses', 'BusinessesController');
 });
 

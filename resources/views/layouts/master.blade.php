@@ -29,17 +29,13 @@
 	    </form>
 	    <ul class="navbar-nav ml-auto">
             @guest
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('login') }}">@lang('Login')</a></li>
                 @if (Route::has('register'))
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{route('register')}}">@lang('Register')</a></li>
                 @endif
             @else
 	      		<li><a href="{{url('businesses/create')}}" class="btn btn-outline-success">New Business Integration</a></li>
-                <li><a class="btn" href="#">{{ Auth::user()->name }}</a></li>
+                <li><a class="btn" href="{{url('account')}}">{{ Auth::user()->name }}</a></li>
                 <li><a class="btn btn-outline-info" href="{{route('logout')}}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">{{ __('Logout') }}</a></li>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
             @endguest

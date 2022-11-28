@@ -210,7 +210,7 @@ class API extends Model
                 print($e->getResponse()->getBody()->getContents());
             }
             $msg = 'Error reporting invoice';
-            throw new Exception ($msg);
+            throw new \Exception ($msg);
             \Log::error($e->getMessage() ?? $msg);
         }
 

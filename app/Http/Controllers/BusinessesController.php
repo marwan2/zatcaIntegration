@@ -66,7 +66,7 @@ class BusinessesController extends Controller
         if($req->ajax()) {
             return json_encode([
                 'status'=>true, 
-                'message'=>'Buiness onboarding process completed successfully.'
+                'message'=>'Business onboarding process completed successfully.'
             ]);
         }
         dd($result);

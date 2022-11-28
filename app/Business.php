@@ -13,10 +13,28 @@ class Business extends Model
         'name'=>'required',
         'legal_registration_name'=>'required',
         'trn'=>'required|max:15|starts_with:3',
-        //'organization_unit_name'=>'required|max:200',
         'country_iso2'=>'required|max:2',
         'location_address'=>'required',
         'xprefix'=>'required|numeric',
+        'auth_token'=>'required',
+    ];
+
+    public static $api_validation = [
+        'name'=> 'required',
+        'legal_registration_name'=> 'required',
+        'trn'=>'required|max:15|starts_with:3',
+        'country_iso2'=> 'required',
+        'location_address'=> 'required',
+        'xprefix'=> 'required',
+        'auth_token'=> 'required',
+        'street_name'=> 'required',
+        'city'=> 'required',
+        'building_no'=> 'required',
+        'country_subentity'=> 'required',
+        'district'=> 'required',
+        'postal_code'=> 'required',
+        'identification_scheme'=> 'required',
+        'identificationt_id'=> 'required',
     ];
 
     public static $scheme = [
@@ -26,6 +44,31 @@ class Business extends Model
 		'SAG'=>'Sagia license',
 		'OTH'=>'Other',
 	];
+
+    public function getBusiness($prefix) {
+        $business = self::where('xprefix', $prefix)->first();
+        return $business;
+    }
+
+    public function createBusiness($data) {
+        $record = self::create([
+            'name'=>$data['name'],
+            'legal_registration_name'=>$data['name'],
+            'country_iso2'=>$data['iso2'],
+            'location_address'=>$data['address'],
+            'xprefix'=>$data['ERP_xPrefix'],
+            'auth_token'=>$data['ERP_AuthToken'],
+            'street_name'=>$data['street_name'],
+            'city'=>$data['city'],
+            'building_no'=>$data['building_no'],
+            'country_subentity'=>$data['country_subentity'],
+            'district'=>$data['district'],
+            'postal_code'=>$data['postal_code'],
+            'identification_scheme'=>$data['identification_scheme'],
+            'identificationt_id'=>$data['identificationt_id'],
+        ]);
+        return $record;
+    }
 
 	public function getAuthToken() {
 		$authToken = ($this->startsWith($this->auth_token, 'Bearer')) ? $this->auth_token: 'Bearer '.$this->auth_token;

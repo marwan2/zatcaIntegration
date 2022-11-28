@@ -21,4 +21,17 @@ class HomeController extends Controller
 
         return response()->download($filePath);
     }
+
+    public function showUser(Request $req) {
+        return view('users.show');
+    }
+
+    public function refreshToken(Request $req) {
+        $token = \Str::random(80);
+        auth()->user()->forceFill([
+            'api_token' => hash('sha256', $token),
+        ])->save();
+
+        return redirect()->to('account')->with(['token'=>$token]);
+    }
 }
