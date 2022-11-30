@@ -13,7 +13,7 @@
 				<td>TRN</td>
 				<td>Country</td>
 				<td>ERP Prefix</td>
-				<td>Date</td>
+				<td>Onboarding Date</td>
 				<td></td>
 			</tr>
 		</thead>
@@ -24,8 +24,8 @@
 					<td>{{$bs->id}}</td>
 					<td><a href="{{url('businesses/'.$bs->id)}}" class="btn">{{$bs->name}}</a></td>
 					<td>{{$bs->trn}}</td>
-					<td>{{$bs->xprefix}}</td>
 					<td>{{$bs->country_code}}</td>
+					<td>{{$bs->xprefix}}</td>
 					<td>{{$bs->created_at}} </td>
 					<td nowrap="">
 						<a href="{{url('businesses/'.$bs->id.'/edit')}}" class="btn btn-warning">Edit</a>

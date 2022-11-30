@@ -7,19 +7,25 @@ Auth::routes();
 Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('xml/tests', 'TestingController@testXML');
 	Route::post('xml/tests', 'TestingController@postTestXML')->name('testing.xml');
-
 	Route::get('encode-file', 'InvoicesController@encodeFile');
-	Route::get('invoices/validate', 'InvoicesController@validateXML');
-	Route::get('invoices/{business_id}/reporting/{trans_no}', 'InvoicesController@reporting')->name('invoice.reporting');
-	Route::get('invoices/{business_id}/compliance/{trans_no}', 'InvoicesController@checkInvoiceCompliance')->name('invoice.compliance');
-	Route::get('invoices/{business_id}/clearance/{trans_no}', 'InvoicesController@reporting')->name('invoice.clearance');
 
-	Route::get('invoices/{trans_no}/{business_id}/pdf', 'InvoicesController@getPDF');
-	Route::get('invoices/{business_id}/show/{trans_no}/', 'InvoicesController@showInvoice');
-	Route::get('invoices/{business_id}/{trans_no}', 'InvoicesController@getTemplate');
-	Route::get('invoices/{business_id}/xml/{trans_no}', 'InvoicesController@generateXML');
+	Route::get('invoices/validate', 'InvoicesController@validateXML');
+	Route::get('invoices/reporting/{trans_no}', 'InvoicesController@reporting')->name('invoice.reporting');
+	Route::get('invoices/compliance/{trans_no}', 'InvoicesController@checkInvoiceCompliance')->name('invoice.compliance');
+	Route::get('invoices/clearance/{trans_no}', 'InvoicesController@reporting')->name('invoice.clearance');
+	Route::get('invoices/{trans_no}/pdf', 'InvoicesController@getPDF');
+	Route::get('invoices/show/{trans_no}', 'InvoicesController@showInvoice');
+	Route::get('invoices/{trans_no}', 'InvoicesController@getTemplate');
+	Route::get('invoices/xml/{trans_no}', 'InvoicesController@generateXML');
 	Route::get('invoices', 'InvoicesController@invoices');
 
+	Route::get('credit-notes/show/{trans_no}', 'CreditNotesController@showInvoice');
+	Route::get('credit-notes/xml/{trans_no}', 'CreditNotesController@generateXML');
+	Route::get('credit-notes/compliance/{trans_no}', 'CreditNotesController@checkInvoiceCompliance')->name('cn.compliance');
+	Route::get('credit-notes', 'CreditNotesController@index');
+
+	Route::get('businesses/select', 'BusinessesController@selectBusiness')->name('business.select');
+	Route::get('businesses/switch/{business_id}', 'BusinessesController@switchBusiness')->name('business.switch.do');
 	Route::get('businesses/{business_id}/pcsid/renewal', 'BusinessesController@certificateRenewal')->name('csid.renewal');
 	Route::get('businesses/{business_id}/onboarding', 'BusinessesController@onBoarding')->name('onboarding');
 	Route::get('businesses/{business_id}/geneate-certificate-pem', 'BusinessesController@generateCertPem')->name('cert.pem');

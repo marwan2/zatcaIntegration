@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Ramsey\Uuid\Uuid;
 use PDF;
 
-class Invoice extends Model
+class CreditNote extends Model
 {
-    protected $table = "invoices";
+    protected $table = "credit_notes";
     protected $guarded = [];
     public $business;
 
@@ -31,39 +31,39 @@ class Invoice extends Model
     }
 
     public function url($trans_no) {
-        return url("invoices/show/{$trans_no}");
+        return url("credit-notes/show/{$trans_no}");
     }
 
     public function pdf_url($trans_no) {
-        return url("invoices/{$trans_no}/pdf");
+        return url("credit-notes/{$trans_no}/pdf");
     }
 
     public function xml_url($trans_no, $signed=0) {
-        return url('invoices/xml/'.$trans_no.'?xml&signed='.$signed);
+        return url('credit-notes/xml/'.$trans_no.'?xml&signed='.$signed);
     }
 
     public function xml_file_url($trans_no) {
-        return url('invoices/xml/'.$trans_no.'?file');
+        return url('credit-notes/xml/'.$trans_no.'?file');
     }
 
     public function encode_xml_url($trans_no) {
-        return url('invoices/xml/'.$trans_no.'?base64');
+        return url('credit-notes/xml/'.$trans_no.'?base64');
     }
 
     public function view_url($trans_no) {
-        return url('invoices/xml/'.$trans_no);
+        return url('credit-notes/xml/'.$trans_no);
     }
 
     public function template_url($trans_no) {
-        return url('invoices/'.$trans_no);
+        return url('credit-notes/'.$trans_no);
     }
 
     public function reporting_url($trans_no) {
-        return url('invoices/reporting/'.$trans_no);
+        return url('credit-notes/reporting/'.$trans_no);
     }
 
     public function compliance_url($trans_no) {
-        return url('invoices/compliance/'.$trans_no);
+        return url('credit-notes/compliance/'.$trans_no);
     }
 
     public function pdf_filename($trans_no, $with_path=true) {
@@ -90,7 +90,7 @@ class Invoice extends Model
             ]
         ]);
 
-        $response = $client->request('GET', 'sales/'.$trans_no.'/'.Helper::ERP_SALESINVOICE);
+        $response = $client->request('GET', 'sales/'.$trans_no.'/'.Helper::ERP_CREDITNOTE);
         $data = $response->getBody();
         $invoice = json_decode($data->getContents(), 1);
         $invoice = $invoice['data'] ?? null;
@@ -115,22 +115,6 @@ class Invoice extends Model
         $response = $client->request('GET', 'sales/print_preview/'.$trans_no);
         $data = $response->getBody();
         $invoice = $data->getContents();
-        return $invoice;
-    }
-
-    public static function getInvoiceFromDb($trans_no, $business, $trans_type='invoice') {
-        $invoice = self::whereTrans_no($trans_no)
-            ->whereBusiness_id($business->id)
-            ->whereTrans_type($trans_type)->first();
-
-        if(!$invoice) {
-            $invoice = self::create([
-                'trans_type'    => $trans_type,
-                'trans_no'      => $trans_no,
-                'business_id'   => $business->id,
-                'uuid'          =>self::generateUUID(),
-            ]);
-        }
         return $invoice;
     }
 

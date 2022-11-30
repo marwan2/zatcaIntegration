@@ -5,19 +5,17 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Business;
 use App\Invoice;
+use App\CreditNote;
 use App\Helper;
 
-class InvoicesController extends Controller
+class CreditNotesController extends Controller
 {
 	public function __construct() {
-
+        $businesses = Business::orderBy('id', 'ASC')->get();
+        view()->share('businesses', $businesses);
     }
 
-    public function index() {
-    	return view('invoices.index');
-    }
-
-	public function invoices(Request $req) {
+	public function index(Request $req) {
         $invoices = null;
         $paging = null;
         $business = Business::selected($req);
@@ -34,7 +32,8 @@ class InvoicesController extends Controller
             ]);
 
             try {
-                $response = $client->request('GET', 'sales/'.Helper::ERP_SALESINVOICE.'?page=1&limit=30');
+                $url = "customers/allocations?page=1&limit=30&type=".Helper::ERP_CREDITNOTE."&settled=1";
+                $response = $client->request('GET', $url);
                 $data = $response->getBody();
                 $data = json_decode($data->getContents(), 1);
 
@@ -51,7 +50,7 @@ class InvoicesController extends Controller
             }
         }
 
-        return view('invoices.index', compact('invoices', 'business', 'paging'));
+        return view('credit_notes.index', compact('invoices', 'business', 'paging'));
     }
 
     public function generateXML(Request $req, $trans_no) {
@@ -59,15 +58,15 @@ class InvoicesController extends Controller
         $business = Business::selected($req);
 
         if($business && $trans_no) {
-            $invoice = Invoice::getInvoiceFromErp($trans_no, $business);
-            $invoiceDB = Invoice::getInvoiceFromDb($trans_no, $business);
+            $invoice = CreditNote::getInvoiceFromErp($trans_no, $business);
+            $invoiceDB = Invoice::getInvoiceFromDb($trans_no, $business, 'credit_note');
 
             $inv = new \App\XMLInvoice;
             $inv->setBusiness($business)
                 ->setInvoice($invoice)
                 ->setInvoiceInDB($invoiceDB)
                 ->setNo($trans_no)
-                ->setTypeCode(Invoice::INVOICE);
+                ->setTypeCode(Invoice::CREDIT_NOTE);
 
             $xml = $inv->getXML();
 
@@ -105,28 +104,12 @@ class InvoicesController extends Controller
         return $invoice;
     }
 
-    public function validateXML(Request $req) {
-        $file = $req->get('file');
-        $path = public_path(\App\XMLInvoice::$base_dir) . '/'.$file;
-        $file_content = file_get_contents($path);
-
-        $dom = new \DOMDocument;
-        $inv = new \App\XMLInvoice;
-        $dom->loadXML($file_content);
-
-        $fileAnchor = $inv->fileAnchor($file);
-        if($inv->isValidSchema($dom)) {
-            return 'Valid document. ' . $fileAnchor;
-        }
-        return 'Document is not valid. ' . $fileAnchor;
-    }
-
     public function getTemplate(Request $req, $trans_no) {
         $invoice = null;
         $business = Business::selected($req);
 
         if($business && $trans_no) {
-            $invoice = \App\Invoice::getInvoiceTemplate($trans_no, $business);
+            $invoice = Invoice::getInvoiceTemplate($trans_no, $business);
             print $invoice;
         }
         return;
@@ -136,9 +119,8 @@ class InvoicesController extends Controller
         $business = Business::selected($req);
 
         if($business && $trans_no) {
-            $invoice = \App\Invoice::getInvoiceTemplate($trans_no, $business);
-            
-            $inv = new \App\Invoice;
+            $invoice = Invoice::getInvoiceTemplate($trans_no, $business);
+            $inv = new Invoice;
             $inv->setBusiness($business);
 
             $pdf = \PDF::loadHTML($invoice);
@@ -151,7 +133,7 @@ class InvoicesController extends Controller
         $business = Business::selected($req);
 
         if($business && $trans_no) {
-            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
+            $invoice = CreditNote::getInvoiceFromErp($trans_no, $business);
             $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($trans_no)->get();
             $invoice['trans_no'] = $trans_no;
 
@@ -164,80 +146,28 @@ class InvoicesController extends Controller
             );
 
             $qrCode = $qr->getQRCode();
-            return view('invoices.show', compact('invoice', 'business', 'qrCode', 'logs'));
+            return view('credit_notes.show', compact('invoice', 'business', 'qrCode', 'logs'));
         }
         return 'Missing params.';
     }
 
-    public function reporting(Request $req, $trans_no) {
-        $business = Business::selected($req);
-
-        if($business && $trans_no) {
-            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
-            $invoiceDB = \App\Invoice::getInvoiceFromDb($trans_no, $business);
-            $invoice['trans_no'] = $trans_no;
-
-            $inv = new \App\XMLInvoice;
-            $inv->setBusiness($business)
-                ->setInvoice($invoice)
-                ->setInvoiceInDB($invoiceDB)
-                ->setNo($trans_no);
-            $invoice_xml = $inv->getXML();
-
-            // Save XML file
-            $invoice_path = public_path(\App\XMLInvoice::$base_dir) . '/' . $inv->fileName();
-            $dom = new \DOMDocument;
-            $dom->loadXML($invoice_xml);
-            $dom->save($invoice_path);
-
-            // Sign Invoice
-            $signing = new \App\Signing;
-            $signing->setBusiness($business);
-            list($signed_invoice_string, $invoice_hash, $qr) = $signing->signInvoice($invoice_xml, false);
-
-            // Encode Invoice
-            $signed_invoice_encoded = base64_encode($signed_invoice_string);
-
-            // Call reporting API
-            $api = new \App\API;
-            $api->setBusiness($business);
-            $output = $api->reporting($signed_invoice_encoded, $invoice_hash);
-
-            if (isset($output['validationResults']) && isset($output['validationResults']['status']) == 'PASS') {
-                if(isset($output['clearanceStatus']) && $output['clearanceStatus'] == 'CLEARED') {
-                    print ('Invoice compliance passed successfully');
-                }
-            } else {
-                $msg = "Invoice is not complaint with ZATCA";
-                \Log::warning($msg);
-            }
-
-            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
-            \Log::info($output);
-            dd($output);
-        }
-
-        $msg = 'Missing params on reporting invoice #' . $trans_no;
-        \Log::error($msg);
-        return $msg;
-    }
-
     /**
-     * Check Invoice Compliance 
+     * Check Credit Note Compliance 
      */
     public function checkInvoiceCompliance(Request $req, $trans_no=null) {
         $business = Business::selected($req);
 
         if($business && $trans_no) {
-            $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
-            $invoiceDB = \App\Invoice::getInvoiceFromDb($trans_no, $business);
+            $invoice = CreditNote::getInvoiceFromErp($trans_no, $business);
+            $invoiceDB = Invoice::getInvoiceFromDb($trans_no, $business, 'credit_note');
             $invoice['trans_no'] = $trans_no;
 
             $inv = new \App\XMLInvoice;
             $inv->setBusiness($business)
                 ->setInvoice($invoice)
                 ->setInvoiceInDB($invoiceDB)
-                ->setNo($trans_no);
+                ->setNo($trans_no)
+                ->setTypeCode(Invoice::CREDIT_NOTE);
             $invoice_xml = $inv->getXML();
 
             // Save XML file
@@ -279,13 +209,4 @@ class InvoicesController extends Controller
         \Log::error($msg);
         return $msg;
     }
-
-	public function encodeFile(Request $req) {
-		$file = $req->get('filename');
-		$file_encoded = '';
-		if($file) {
-			$file_encoded = base64_encode(file_get_contents(public_path(XMLInvoice::$base_dir).'/'.$file));
-		}
-		return $file_encoded;
-	}
 }

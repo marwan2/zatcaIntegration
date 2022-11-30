@@ -18,6 +18,20 @@ class BusinessesController extends Controller
         return view('businesses.index', compact('businesses'));
     }
 
+    public function selectBusiness(Request $req) {
+        $businesses = new Business;
+        $businesses = $businesses->orderBy('name', 'ASC')->get();
+
+        return view('businesses.switch', compact('businesses'));
+    }
+
+    public function switchBusiness(Request $req, $business_id) {
+        $bs = Business::findOrFail($business_id);
+        session()->put('se_business', $bs);
+
+        return redirect()->to('invoices');
+    }
+
     public function create() {
         return view('businesses.create');
     }

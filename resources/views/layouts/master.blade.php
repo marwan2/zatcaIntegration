@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>@yield('title') McLedger Zatca</title>
+	<title>@yield('title') McLedger Zatca Intgeration</title>
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" type="text/css" rel="stylesheet">
 </head>
 <body>
@@ -20,6 +20,9 @@
 	      </li>
 	      <li class="nav-item">
 	        <a class="nav-link" href="{{url('invoices')}}">Invoices</a>
+	      </li>
+	      <li class="nav-item">
+	        <a class="nav-link" href="{{url('credit-notes')}}">Credit Notes</a>
 	      </li>
 	      <li class="nav-item">
 	        <a class="nav-link" href="{{url('xml/tests')}}">XML Testing</a>
@@ -56,6 +59,16 @@
 		      {!!Session::get('flash_message')!!}
 		    </div>
 		@endif
+		@if(Session::has('se_business') && Session::get('se_business'))
+		    <div class="alert alert-primary bg-dark text-white d-flex justify-content-between">
+		      <strong>Business: 
+		      {!!Session::get('se_business')->name ?? ''!!} 
+		      (Prefix: {!!Session::get('se_business')->xprefix ?? ''!!})
+		      </strong>
+		      <a href="{{url('businesses/select')}}" class="btn btn-outline-light">Switch</a>
+		    </div>
+		@endif
+
 		@yield('content')
 	</main>
 	<footer class="w-100 bg-light mt-5 p-2 text-center text-muted">

@@ -9,6 +9,8 @@ class Helper extends Model
 	public $status_code = 200;
 	public $message = '';
 	public $headers = [];
+	const ERP_SALESINVOICE = 10;
+	const ERP_CREDITNOTE = 11;
 
 	public function code($status_code=200) {
 		$this->status_code = $status_code;

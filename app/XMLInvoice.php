@@ -11,6 +11,7 @@ class XMLInvoice extends Model
     public $invoiceInDB;
     public $business;
     private $trans_no;
+    private $icalc;
 
     public function getSchema() {
         return $this->schema;
@@ -51,17 +52,41 @@ class XMLInvoice extends Model
         return $this;
     }
 
+    public function setTypeCode($type) {
+        $this->type = $type;
+        return $this;
+    }
+
+    public function getTypeCode() {
+        if($this->type) {
+            return $this->type;
+        }
+        return \App\Invoice::INVOICE;
+    }
+
+    public function setCalc() {
+        $this->icalc = new Calc;
+        if($this->invoice) {
+            $this->icalc->setInvoice($this->invoice);
+        }
+
+        $taxes = Invoice::getTaxforItems($this->getBusiness());
+        if($taxes) {
+            $this->icalc->setTaxes($taxes);
+        }
+    }
+
     public function getXML() {
         $invoice = $this->getInvoice();
-        
+        $this->setCalc();
+
         $supplierCompany = $this->businessNode();
         $clientCompany = $this->customerNode();
         $invoiceLines = $this->invoiceLines();
         $invoiceTaxes = $this->invoiceTaxes();
         $legalMonetaryTotal = $this->legalMonetaryTotal();
         $paymentMeans = $this->paymentMeans();
-
-        $invoiceTypeCode = \App\Invoice::INVOICE;
+        $invoiceTypeCode = $this->getTypeCode();
         $invoiceTypeCodeName = \App\Invoice::getTypeCodeName('01');
 
         $issue_date = new \DateTime($invoice['order_date']);
@@ -95,7 +120,6 @@ class XMLInvoice extends Model
         $invoiceXML->setId($invoice_id)
             ->setUUID($invoice_uuid)
             ->setInvoiceTypeCode($invoiceTypeCode, $invoiceTypeCodeName)
-            //->setCopyIndicator(false)
             ->setIssueDate($issue_date)
             ->setIssueTime($issue_time)
             ->setDueDate($due_date)
@@ -110,11 +134,17 @@ class XMLInvoice extends Model
             ->setProfileID('reporting:1.0')
             ->setSignature($signature)
             ->setExtensions('SET_UBL_EXTENSIONS_STRING')
+            //->setCopyIndicator(false)
             //->setNote($this->clean($invoice['comments']))
         ;
 
         if($curr_code) {
             $invoiceXML->addTaxTotal($this->onlyTaxTotal());
+        }
+
+        if($this->getTypeCode() == Invoice::CREDIT_NOTE) {
+            $billingRef = $this->billingReference();
+            $invoiceXML->setBillingReference($billingRef);
         }
 
         $ref_ICV = $this->additionalDocumentReference('ICV');
@@ -308,8 +338,6 @@ class XMLInvoice extends Model
             return;
         }
 
-        $calc = new Calc;
-        $calc->setInvoice($this->getInvoice());
         $documentAllowanceCharge = null;
 
         foreach($invoice['line_items'] as $item) {
@@ -317,7 +345,7 @@ class XMLInvoice extends Model
                 $documentAllowanceCharge[] = (new \NumNum\UBL\AllowanceCharge())
                     ->setChargeIndicator(false)
                     ->setAllowanceChargeReason('Discount')
-                    ->setAmount($calc->getDiscount($item))
+                    ->setAmount($this->icalc->getDiscount($item))
                     ->setTaxCategory($this->allowanceTaxCategory($item));
             }
         }
@@ -336,13 +364,7 @@ class XMLInvoice extends Model
     public function invoiceLines() {
         $invoice = $this->getInvoice();
         $trn = $this->getBusiness()->trn;
-
-        $calc = new Calc;
-        $calc->setInvoice($this->getInvoice());
-        $taxes = Invoice::getTaxforItems($this->getBusiness());
-        if($taxes) {
-            $calc->setTaxes($taxes);
-        }
+        $calc = $this->icalc;
 
         $invoiceLines = [];
         foreach($invoice['line_items'] as $item) {
@@ -367,7 +389,7 @@ class XMLInvoice extends Model
                 ->setTaxAmount($itemTotalTax)
                 ->setRoundingAmount($roundingAmount);
 
-            $classifiedTaxCategory = $this->itemTaxCategory($item, $calc);
+            $classifiedTaxCategory = $this->itemTaxCategory($item);
 
             $allowanceCharge = null;
             if($item['discount'] != 0) {
@@ -402,17 +424,23 @@ class XMLInvoice extends Model
         return $invoiceLines;
     }
 
+    public function totalLineExtensionAmount() {
+        $invoice = $this->getInvoice();
+        $total = 0;
+        foreach($invoice['line_items'] as $item) {
+            $total += round($this->icalc->calcItemTotal($item), 2);
+        }
+        return $total;
+    }
+
     public function legalMonetaryTotal() {
         $invoice = $this->getInvoice();
-        $calc = new Calc;
-        $calc->setInvoice($this->getInvoice());
-
-        $line_ext_amount = floatval($invoice['sub_total']) - floatval($invoice['freight_cost']);
+        $line_ext_amount = $this->totalLineExtensionAmount();
         $payable_amount = $invoice['display_total'];
         $tax_total = $invoice['tax_total'];
         $tax_inclusive_amount = $invoice['display_total'];
         $tax_exclusive_amount = $invoice['display_total'] - $tax_total;
-        $allowanceTotal = $calc->allowanceTotal();
+        $allowanceTotal = $this->icalc->allowanceTotal();
 
         $legalMonetaryTotal = (new \NumNum\UBL\LegalMonetaryTotal())
             ->setLineExtensionAmount($line_ext_amount)
@@ -492,7 +520,11 @@ class XMLInvoice extends Model
         return $entity;
     }
 
-    // Codes list: https://service.unece.org/trade/untdid/d16b/tred/tred4461.htm
+    /**
+     * Codes list: https://service.unece.org/trade/untdid/d16b/tred/tred4461.htm
+     * CreditNote type: must include cbc:InstructionNote
+     * Fix me: For CreditNotes: get proper InstructionNote
+     */
     public function paymentMeans() {
         $invoice = $this->getInvoice();
         $code = 97; // Clearing between partners
@@ -511,10 +543,11 @@ class XMLInvoice extends Model
             $note = $codes[$code];
         }
 
-        $means = (new \NumNum\UBL\PaymentMeans())
-            ->setPaymentMeansCode($code, null)
-            //->setInstructionNote($note)
-        ;
+        $means = new \NumNum\UBL\PaymentMeans();
+        $means->setPaymentMeansCode($code, null);
+        if($this->type == Invoice::CREDIT_NOTE) {
+            $means->setInstructionNote($note);
+        }
         return $means;
     }
 
@@ -595,7 +628,7 @@ class XMLInvoice extends Model
         return null;
     }
 
-    public function itemTaxCategory($item, Calc $calc) {
+    public function itemTaxCategory($item) {
         $taxCatSchemeID = 'VAT';
         $taxScheme = (new \NumNum\UBL\TaxScheme())->setId($taxCatSchemeID);
 
@@ -609,7 +642,7 @@ class XMLInvoice extends Model
             $classified_id = 'Z';
         }
 
-        $tax_percent = $calc->itemTaxRate($item);
+        $tax_percent = $this->icalc->itemTaxRate($item);
         $taxCat = (new \NumNum\UBL\ClassifiedTaxCategory())
             ->setId($classified_id)
             //->setName($item['tax_type_name'])
@@ -642,6 +675,15 @@ class XMLInvoice extends Model
         $content = $qr->getQRCode();
 
         return base64_encode(hash('sha512', $content));
+    }
+
+    /**
+     * Set CreditNote related SalesInvoice ID as InvoiceDocumentReference ID
+     */
+    public function billingReference() {
+        $invoice_id = \App\Invoice::docRefUUID($this->trans_no);
+        $billingRef = (new \NumNum\UBL\BillingReference())->setInvoiceDocumentReferenceID($invoice_id);
+        return $billingRef;
     }
 
     //SCHEMA: Seller Identification + ”_” + Date + ”T” + Time + ”_” + IRN.xml

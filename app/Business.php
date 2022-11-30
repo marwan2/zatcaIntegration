@@ -25,8 +25,6 @@ class Business extends Model
         'trn'=>'required|max:15|starts_with:3',
         'country_iso2'=> 'required',
         'location_address'=> 'required',
-        'xprefix'=> 'required',
-        'auth_token'=> 'required',
         'street_name'=> 'required',
         'city'=> 'required',
         'building_no'=> 'required',
@@ -34,7 +32,7 @@ class Business extends Model
         'district'=> 'required',
         'postal_code'=> 'required',
         'identification_scheme'=> 'required',
-        'identificationt_id'=> 'required',
+        'identification_id'=> 'required',
     ];
 
     public static $scheme = [
@@ -65,9 +63,17 @@ class Business extends Model
             'district'=>$data['district'],
             'postal_code'=>$data['postal_code'],
             'identification_scheme'=>$data['identification_scheme'],
-            'identificationt_id'=>$data['identificationt_id'],
+            'identification_id'=>$data['identification_id'],
         ]);
         return $record;
+    }
+
+    public function alreadyOnboarded($data) {
+        $check = Business::where('xprefix', $data['xprefix'])->whereNotNull('ccsid')->whereNotNull('pcsid')->first();
+        if($check && $check->count() > 0) {
+            return true;
+        }
+        return false;
     }
 
 	public function getAuthToken() {
@@ -251,5 +257,39 @@ class Business extends Model
         $output = preg_replace('!\s+!', '', trim($string));
 
         return $output;
+    }
+
+    /**
+     * Update ERP database with needed columns for ZATCA integration
+     * Such as reporting status column in debtor_trans
+     */
+    public function updateERPDB($business=null) {
+        $client = new \GuzzleHttp\Client([
+            'base_uri'=> env('FA_API_URL'),
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'accept' => 'application/json',
+                'X-PREFIX' => $this->xprefix,
+                'AUTH-TOKEN' => $this->getAuthToken(),
+            ]
+        ]);
+
+        try {
+            $response = $client->request('GET', 'company/zatca-db-updates');
+            $data = $response->getBody();
+            $res = json_decode($data->getContents(), 1);
+            return $res;
+        } catch(\Exception $e) {
+            //print($e->getMessage());
+            return false;
+        }
+        return null;
+    }
+
+    public static function selected(\Illuminate\Http\Request $req) {
+        if($req->session()->has('se_business')) {
+            return $req->session()->get('se_business');
+        }
+        throw new \Illuminate\Http\Exceptions\HttpResponseException(redirect('businesses/select')->with('flash_message', 'Please select business.'));
     }
 }

@@ -260,7 +260,7 @@ class API extends Model
             if($e != null) {
                 print($e->getResponse()->getBody()->getContents());
             }
-            print($e->getMessage());
+            //print($e->getMessage());
             \Log::error($e->getMessage());
         }
         return $output;

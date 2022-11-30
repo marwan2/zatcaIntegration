@@ -6,7 +6,7 @@
 @extends('layouts.master')
 
 @section('content')
-	<h3>Business: <a href="{{url('invoices?business_id='.$business->id)}}">{{$business->name}}</a></h3>
+	<a href="{{url('invoices')}}" class="btn btn-outline-dark">Back to Listing</a></h3>
 	<hr>
 	@if($invoice)
 		<table border="1" cellpadding="6" class="table table-bordered" style="border-collapse: collapse;">

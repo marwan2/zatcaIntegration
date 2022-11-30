@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Business;
 use App\Invoice;
 use App\Helper;
+use App\ReportingLog;
 use Log;
 
 class ApiController extends Controller
@@ -21,6 +22,7 @@ class ApiController extends Controller
 
     public function onBoarding(Request $req) {
         $hl = new Helper;
+        $bs = new Business;
         $result = true;
 
         $validation = Validator::make($req->all(), Business::$api_validation);
@@ -30,7 +32,18 @@ class ApiController extends Controller
         }
 
         $data = $req->all();
-        $business = Business::createBusiness($data);
+        $data['xprefix'] = $req->header('X-PREFIX');
+        $data['auth_token'] = $req->header('AUTH-TOKEN');
+
+        if($bs->alreadyOnboarded($data)) {
+            return $hl->code(301)->msg('Business already onboarded.')->res();
+        }
+
+        $business = $bs->createBusiness($data);
+
+        if($business) {
+            $updated = $bs->updateERPDB();
+        }
 
         if(!$business->csrExists()) {
             // Set CSR config file
@@ -98,9 +111,9 @@ class ApiController extends Controller
                 Log::warning($msg);
             }
 
-            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
+            ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
             Log::info($output);
-            dd($output);
+            return $hl->code(200)->msg('Reported')->res($output);
         }
 
         $msg = 'Missing params on reporting invoice #' . $trans_no;
@@ -113,7 +126,7 @@ class ApiController extends Controller
      */
     public function checkInvoiceCompliance(Request $req, $business_id=null, $trans_no=null) {
         $hl = new Helper;
-        $business = (new Business)->getBusiness($req->header('X-Prefix'));
+        $business = (new Business)->getBusiness($req->header('X-PREFIX'));
         $trans_no = $req->get('trans_no');
 
         if($business && $trans_no) {
@@ -147,10 +160,11 @@ class ApiController extends Controller
             $api->setBusiness($business);
             $api->setInvoice($invoiceDB);
             $output = $api->invoiceCompliance($signed_invoice_encoded, $invoice_hash);
-            
+            $msg = '';
+
             if (isset($output['validationResults']) && isset($output['validationResults']['status']) == 'PASS') {
                 if(isset($output['clearanceStatus']) && $output['clearanceStatus'] == 'CLEARED') {
-                    print ('Invoice compliance passed successfully');
+                    $msg = 'Invoice compliance passed successfully';
                 }
             } else {
                 $msg = "Invoice is not complaint with ZATCA";
@@ -158,9 +172,9 @@ class ApiController extends Controller
             }
 
             // Save action to log table
-            \App\ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output);
+            ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output);
             Log::info($output);
-            $hl->code(200)->msg('Done')->res($output);
+            return $hl->code(200)->msg($msg)->res($output);
         }
 
         $msg = 'Missing params on check invoice compliance #' . $trans_no;
