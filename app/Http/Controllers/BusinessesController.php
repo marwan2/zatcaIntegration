@@ -130,4 +130,19 @@ class BusinessesController extends Controller
         $output = $business->generateCertificatePEM($PCSIDbase64, 'production');
         return $output;
     }
+
+    public function updateErpOnboarding(Request $req, $business_id) {
+        $business = Business::findOrFail($business_id);
+        $status = $req->get('is_onboarded');
+        if($business) {
+            if($business->updateOnboardingStatus($status)) {
+                $business->erp_onboarding_status = $status;
+                $business->save();
+
+                session()->flash('flash_message', 'ERP onboarding status updated successfully');
+                return redirect()->back();
+            }
+        }
+        throw new \Exception('Error updating status');
+    }
 }

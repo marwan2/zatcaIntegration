@@ -207,10 +207,11 @@ class API extends Model
             $output = json_decode($data->getContents(), 1);
         } catch(\Exception $e) {
             if($e != null) {
-                print($e->getResponse()->getBody()->getContents());
+                //print($e->getResponse()->getBody()->getContents());
+                $output = $e->getResponse()->getBody()->getContents() ?? null;
             }
             $msg = 'Error reporting invoice';
-            throw new \Exception ($msg);
+            //throw new \Exception($msg);
             \Log::error($e->getMessage() ?? $msg);
         }
 
@@ -258,7 +259,8 @@ class API extends Model
             $output = json_decode($data->getContents(), 1);
         } catch(\Exception $e) {
             if($e != null) {
-                print($e->getResponse()->getBody()->getContents());
+                //print($e->getResponse()->getBody()->getContents());
+                $output = $e->getResponse()->getBody()->getContents() ?? null;
             }
             //print($e->getMessage());
             \Log::error($e->getMessage());

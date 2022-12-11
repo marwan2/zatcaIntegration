@@ -276,11 +276,39 @@ class Business extends Model
 
         try {
             $response = $client->request('GET', 'company/zatca-db-updates');
-            $data = $response->getBody();
-            $res = json_decode($data->getContents(), 1);
+            $body = $response->getBody();
+            $res = json_decode($body->getContents(), 1);
             return $res;
         } catch(\Exception $e) {
-            //print($e->getMessage());
+            \Log::error('Cannot update ERP DB for ' . $this->name ?? '');
+            return false;
+        }
+        return null;
+    }
+
+    /**
+     * Update onboarding Status on business at ERP
+     */
+    public function updateOnboardingStatus($status=null) {
+        $client = new \GuzzleHttp\Client([
+            'base_uri'=> env('FA_API_URL'),
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'accept' => 'application/json',
+                'X-PREFIX' => $this->xprefix,
+                'AUTH-TOKEN' => $this->getAuthToken(),
+            ]
+        ]);
+        $data = ['status'=>$status];
+
+        try {
+            $response = $client->request('POST', 'zatca/update-onboarding-status', ['json' => $data]);
+            $body = $response->getBody();
+            $res = json_decode($body->getContents(), 1);
+            return $res;
+        } catch(\Exception $e) {
+            \Log::error('Cannot update onboarding status for ' . $this->name ?? '');
+            print($e->getResponse()->getBody()->getContents());
             return false;
         }
         return null;

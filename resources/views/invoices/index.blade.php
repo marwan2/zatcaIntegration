@@ -40,7 +40,7 @@
 		</table>
 
 		@if(isset($data['next_url']) && !empty($data['next_url']))
-			<a href="#" class="btn btn-outline-primary">Next &gt; </a>
+			<a href="{{url('invoices?page='.$data['next_url'])}}" class="btn btn-outline-primary">Next &gt; </a>
 		@endif
 	@else
 		<div class="alert alert-danger">No invoices found</div>

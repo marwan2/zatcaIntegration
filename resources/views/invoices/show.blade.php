@@ -9,6 +9,7 @@
 	<a href="{{url('invoices')}}" class="btn btn-outline-dark">Back to Listing</a></h3>
 	<hr>
 	@if($invoice)
+		<h3>Transaction #{{$invoice['trans_no']}}</h3>
 		<table border="1" cellpadding="6" class="table table-bordered" style="border-collapse: collapse;">
 			<thead>
 				<tr>
@@ -45,10 +46,48 @@
 		<a href="{{$inv->reporting_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">Reporting Invoice</a>
 		<a href="{{$inv->compliance_url($invoice['trans_no'])}}" class="btn btn-primary" target="_blank">Check Compliance</a>
 
-		<br><br>
-		<h3>QR code</h3>
-		@if($qrCode)
-			<img src="{!!$qrCode!!}" alt=''>
-		@endif
+		<div class="card bg-light mt-3 mb-2">
+			<div class="card-body">
+				<h4 class="text-info">QR code</h4>
+				@if($qrCode)
+					<img src="{!!$qrCode!!}" alt=''>
+				@endif
+			</div>
+		</div>
+		<div class="card bg-light">
+			<div class="card-body">
+				<h4 class="text-info">Reporting Logs</h4>
+				<table class="table table-striped table-bordered">
+					<thead>
+						<tr class="font-weight-bold">
+							<td>Action</td>
+							<td>Method</td>
+							<td>Trans No.</td>
+							<td>API Response</td>
+							<td>Date</td>
+						</tr>
+					</thead>
+					<tbody>
+						@if($logs && $logs->count() > 0)
+							@foreach($logs as $log)
+							<tr>
+								<td>{{$log->action}}</td>
+								<td>{{$log->method}}</td>
+								<td>{{$log->trans_no}}</td>
+								<td><textarea class="form-control" rows="3">{{$log->api_response}}</textarea></td>
+								<td>{{Carbon\Carbon::parse($log->created_at)->diffForHumans()}}</td>
+							</tr>
+							@endforeach
+						@else
+							<tr>
+								<td colspan="5" class="text-center">No records found</td>
+							</tr>
+						@endif
+					</tbody>
+				</table>
+				{!!$logs->links()!!}
+				<small>Total: {{$logs->total()}}</small>
+			</div>
+		</div>
 	@endif
 @endsection

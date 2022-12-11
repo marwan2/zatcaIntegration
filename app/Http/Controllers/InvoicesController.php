@@ -152,7 +152,7 @@ class InvoicesController extends Controller
 
         if($business && $trans_no) {
             $invoice = \App\Invoice::getInvoiceFromErp($trans_no, $business);
-            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($trans_no)->get();
+            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($trans_no)->orderBy('created_at', 'DESC')->paginate(5);
             $invoice['trans_no'] = $trans_no;
 
             $qr = new \App\ZatcaQR(
@@ -212,7 +212,7 @@ class InvoicesController extends Controller
                 \Log::warning($msg);
             }
 
-            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
+            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output, 'app');
             \Log::info($output);
             dd($output);
         }
@@ -270,7 +270,7 @@ class InvoicesController extends Controller
             }
 
             // Save action to log table
-            \App\ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output);
+            \App\ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output, 'app');
             \Log::info($output);
             dd($output);
         }

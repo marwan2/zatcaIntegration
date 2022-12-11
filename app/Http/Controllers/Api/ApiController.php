@@ -60,7 +60,10 @@ class ApiController extends Controller
         }
 
         if($pcsid && $ccsid) {
-            return $hl->code(200)->msg('Buiness onboarding process completed successfully.')->res();
+            $bs->updateOnboardingStatus(true);
+            return $hl->code(200)->msg('Business onboarding process completed successfully.')->res();
+        } else {
+            $bs->updateOnboardingStatus(false);
         }
 
         return $hl->code(301)->msg('Error while onboarding.')->res();
@@ -104,7 +107,7 @@ class ApiController extends Controller
 
             if (isset($output['validationResults']) && isset($output['validationResults']['status']) == 'PASS') {
                 if(isset($output['clearanceStatus']) && $output['clearanceStatus'] == 'CLEARED') {
-                    print ('Invoice compliance passed successfully');
+                    $msg = 'Invoice compliance passed successfully';
                 }
             } else {
                 $msg = "Invoice is not complaint with ZATCA";
@@ -113,12 +116,12 @@ class ApiController extends Controller
 
             ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
             Log::info($output);
-            return $hl->code(200)->msg('Reported')->res($output);
+            return $hl->code(200)->msg($msg)->res($output);
         }
 
         $msg = 'Missing params on reporting invoice #' . $trans_no;
         Log::error($msg);
-        return $hl->code(401)->msg($msg)->res();
+        return $hl->code(401)->msg($msg)->res($output);
     }
 
     /**
@@ -180,5 +183,20 @@ class ApiController extends Controller
         $msg = 'Missing params on check invoice compliance #' . $trans_no;
         Log::error($msg);
         return $hl->code(401)->msg($msg)->res();
+    }
+
+    public function updateErpOnboarding(Request $req) {
+        $hl = new Helper;
+        $business = (new Business)->getBusiness($req->header('X-PREFIX'));
+        $status = true;
+        if($business) {
+            if($business->updateOnboardingStatus($status)) {
+                $business->erp_onboarding_status = $status;
+                $business->save();
+
+                return $hl->code(200)->msg('Status updated')->res();
+            }
+        }
+        return $hl->code(401)->msg('Error occured')->res();
     }
 }

@@ -18,6 +18,7 @@ Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('invoices/{trans_no}', 'InvoicesController@getTemplate');
 	Route::get('invoices/xml/{trans_no}', 'InvoicesController@generateXML');
 	Route::get('invoices', 'InvoicesController@invoices');
+	Route::get('logs/{business_id?}', 'LogsController@index')->name('logs');
 
 	Route::get('credit-notes/show/{trans_no}', 'CreditNotesController@showInvoice');
 	Route::get('credit-notes/xml/{trans_no}', 'CreditNotesController@generateXML');
@@ -29,6 +30,7 @@ Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('businesses/{business_id}/pcsid/renewal', 'BusinessesController@certificateRenewal')->name('csid.renewal');
 	Route::get('businesses/{business_id}/onboarding', 'BusinessesController@onBoarding')->name('onboarding');
 	Route::get('businesses/{business_id}/geneate-certificate-pem', 'BusinessesController@generateCertPem')->name('cert.pem');
+	Route::post('businesses/{business_id}/update-erp-onboarding-status', 'BusinessesController@updateErpOnboarding')->name('onb.erp');
 	Route::get('cert-download/{file}', 'HomeController@download');
 
 	Route::get('account', 'HomeController@showUser');

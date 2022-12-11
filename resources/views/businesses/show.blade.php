@@ -93,10 +93,38 @@
 			</div>
 		</div>
 	</div>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">
+					ERP Business onboarded: 
+					@if($business->erp_onboarding_status)
+						<div class="badge badge-success">Yes</div>
+					@else
+						<div class="badge badge-danger">No</div>
+					@endif
+				</div>
+				<div class="card-body">
+					<form action="{{url('businesses/'.$business->id.'/update-erp-onboarding-status')}}" method="POST"> @csrf
+						<div class="form-group form-inline">
+							<select name="is_onboarded" class="form-control" required>
+								<option value="">Select</option>
+								<option value="1">Onboarded</option>
+								<option value="0">Not Onboarded</option>
+							</select>
+							<button type="submit" class="btn btn-primary" onclick="return window.confirm('Change onboarding status: Are you sure?')">Change status</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
 
-	<div class="mt-3">
-		<a href="{{route('businesses.edit', $business->id)}}" class="btn btn-outline-warning">Edit Business</a>
-		<a href="{{route('cert.pem', $business->id)}}" class="btn btn-outline-info" onclick="return window.confirm('Re-generate Certificates in .pem format: Are you sure?')">Generate .pem Certificates</a>
-		<a href="{{route('onboarding', $business->id)}}" class="btn btn-outline-success" onclick="return window.confirm('Becareful this will overwrite current CSR, CCSID, PCSID: Are you sure?')">Re-run Onboarding Process</a>
+	<div class="mt-3 card bg-light">
+		<div class="card-body">
+			<a href="{{route('businesses.edit', $business->id)}}" class="btn btn-outline-warning">Edit Business</a>
+			<a href="{{route('cert.pem', $business->id)}}" class="btn btn-outline-info" onclick="return window.confirm('Re-generate Certificates in .pem format: Are you sure?')">Generate .pem Certificates</a>
+			<a href="{{route('onboarding', $business->id)}}" class="btn btn-outline-success" onclick="return window.confirm('Becareful this will overwrite current CSR, CCSID, PCSID: Are you sure?')">Re-run Onboarding Process</a>
+		</div>
 	</div>
 @endsection

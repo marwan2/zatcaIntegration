@@ -12,4 +12,5 @@ Route::group(['prefix'=>'/', 'namespace'=>'Api', 'middleware'=>['auth:api']], fu
     Route::post('onboarding', 'ApiController@onBoarding');
     Route::post('reporting', 'ApiController@reporting');
     Route::post('compliance-check', 'ApiController@checkInvoiceCompliance');
+    Route::post('erp-onboarding-update', 'ApiController@updateErpOnboarding');
 });
