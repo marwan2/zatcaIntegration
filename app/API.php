@@ -111,6 +111,9 @@ class API extends Model
             $pcsid = $output;
         	$this->business->pcsid = json_encode($pcsid);
         	$this->business->save();
+
+            $PCSIDbase64 = $this->business->getPCSID('binarySecurityToken');
+            $this->business->generateCertificatePEM($PCSIDbase64, 'production');
         } else {
             throw new \Exception("Obtaining production certificate failed for business " . $this->xprefix);
         }

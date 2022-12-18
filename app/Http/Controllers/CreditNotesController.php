@@ -134,7 +134,7 @@ class CreditNotesController extends Controller
 
         if($business && $trans_no) {
             $invoice = CreditNote::getInvoiceFromErp($trans_no, $business);
-            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($trans_no)->get();
+            $logs = \App\ReportingLog::whereBusiness_id($business->id)->whereTrans_no($trans_no)->paginate(10);
             $invoice['trans_no'] = $trans_no;
 
             $qr = new \App\ZatcaQR(

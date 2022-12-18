@@ -34,4 +34,33 @@ class HomeController extends Controller
 
         return redirect()->to('account')->with(['token'=>$token]);
     }
+
+    public function getPassword() {
+        return view('users.password');
+    }
+
+    public function postPassword(Request $request) {
+        $user = Auth::user();
+        $rules = [
+            'old_password'=>'required',
+            'password'=>'required|min:6|max:16|confirmed',
+            'password_confirmation'=>'required|',
+        ];
+
+        $this->validate($request, $rules);
+
+        if(\Hash::check($request->get('old_password'), $user->password)) {
+            $user->password = \Hash::make($request->get('password'));
+            if($user->save()) {
+                session()->flash('alert', 'success');
+                session()->flash('flash_message', __('Password changed successfully'));
+                return redirect('account');
+            }
+        } else {
+            session()->flash('alert', 'danger');
+            session()->flash('flash_message', 'Error occured, please try again');
+            return redirect()->back();
+        }
+        return redirect()->to('/');
+    }
 }

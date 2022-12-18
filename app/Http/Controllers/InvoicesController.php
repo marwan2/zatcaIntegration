@@ -212,7 +212,7 @@ class InvoicesController extends Controller
                 \Log::warning($msg);
             }
 
-            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output, 'app');
+            \App\ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output, 'invoice', 'app');
             \Log::info($output);
             dd($output);
         }
@@ -270,7 +270,7 @@ class InvoicesController extends Controller
             }
 
             // Save action to log table
-            \App\ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output, 'app');
+            \App\ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output, 'invoice', 'app');
             \Log::info($output);
             dd($output);
         }

@@ -18,7 +18,7 @@ Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('invoices/{trans_no}', 'InvoicesController@getTemplate');
 	Route::get('invoices/xml/{trans_no}', 'InvoicesController@generateXML');
 	Route::get('invoices', 'InvoicesController@invoices');
-	Route::get('logs/{business_id?}', 'LogsController@index')->name('logs');
+	Route::resource('logs', 'LogsController');
 
 	Route::get('credit-notes/show/{trans_no}', 'CreditNotesController@showInvoice');
 	Route::get('credit-notes/xml/{trans_no}', 'CreditNotesController@generateXML');
@@ -31,10 +31,13 @@ Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('businesses/{business_id}/onboarding', 'BusinessesController@onBoarding')->name('onboarding');
 	Route::get('businesses/{business_id}/geneate-certificate-pem', 'BusinessesController@generateCertPem')->name('cert.pem');
 	Route::post('businesses/{business_id}/update-erp-onboarding-status', 'BusinessesController@updateErpOnboarding')->name('onb.erp');
+	Route::post('businesses/{business_id}/erp-db-updates', 'BusinessesController@updateErpDB')->name('onb.dberp');
 	Route::get('cert-download/{file}', 'HomeController@download');
 
 	Route::get('account', 'HomeController@showUser');
 	Route::get('account/refresh-token', 'HomeController@refreshToken');
+	Route::get('account/password', 'HomeController@getPassword');
+	Route::post('account/password', 'AccountController@postPassword');
 	Route::resource('businesses', 'BusinessesController');
 });
 

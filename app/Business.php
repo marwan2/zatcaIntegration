@@ -52,8 +52,8 @@ class Business extends Model
         $record = self::create([
             'name'=>$data['name'],
             'legal_registration_name'=>$data['name'],
-            'country_iso2'=>$data['iso2'],
-            'location_address'=>$data['address'],
+            'country_iso2'=>$data['country_iso2'],
+            'location_address'=>$data['location_address'],
             'xprefix'=>$data['ERP_xPrefix'],
             'auth_token'=>$data['ERP_AuthToken'],
             'street_name'=>$data['street_name'],
@@ -64,12 +64,21 @@ class Business extends Model
             'postal_code'=>$data['postal_code'],
             'identification_scheme'=>$data['identification_scheme'],
             'identification_id'=>$data['identification_id'],
+            'otp'=>$data['otp'],
+            'trn'=>$data['trn'],
+            'erp_onboarding_status'=>0,
+            'invoice_type'=>1100,
         ]);
         return $record;
     }
 
     public function alreadyOnboarded($data) {
-        $check = Business::where('xprefix', $data['xprefix'])->whereNotNull('ccsid')->whereNotNull('pcsid')->first();
+        $check = Business::where('xprefix', $data['ERP_xPrefix'])
+        ->whereNotNull('ccsid')
+        ->whereNotNull('pcsid')
+        ->where('ccsid', '!=', '')
+        ->where('pcsid', '!=', '')
+        ->first();
         if($check && $check->count() > 0) {
             return true;
         }
@@ -275,15 +284,20 @@ class Business extends Model
         ]);
 
         try {
-            $response = $client->request('GET', 'company/zatca-db-updates');
+            $response = $client->request('POST', 'company/zatca-db-updates');
             $body = $response->getBody();
             $res = json_decode($body->getContents(), 1);
-            return $res;
+            if(isset($res['data']) && isset($res['data']['result'])) {
+                if($res['data']['result']) {
+                    return true;
+                }
+            }
         } catch(\Exception $e) {
             \Log::error('Cannot update ERP DB for ' . $this->name ?? '');
+            \Log::error($e->getResponse()->getBody()->getContents());
             return false;
         }
-        return null;
+        return false;
     }
 
     /**
@@ -319,5 +333,16 @@ class Business extends Model
             return $req->session()->get('se_business');
         }
         throw new \Illuminate\Http\Exceptions\HttpResponseException(redirect('businesses/select')->with('flash_message', 'Please select business.'));
+    }
+
+    public static function unlink_file($filename) {
+        $result = false;
+        if(file_exists(storage_path('app/'.$filename))) {
+            if(unlink(storage_path('app/'.$filename))) {
+                $result = true;
+            }
+        }
+
+        return $result;
     }
 }

@@ -17,6 +17,7 @@ class Invoice extends Model
     const CREDIT_NOTE = 381;
     const DEBIT_NOTE = 383;
     const SELF_BILLING_INVOICE = 389;
+    const ERP_SALESINVOICE = 11;
 
     public function getBusiness() {
         return $this->business;

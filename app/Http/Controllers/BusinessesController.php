@@ -145,4 +145,31 @@ class BusinessesController extends Controller
         }
         throw new \Exception('Error updating status');
     }
+
+    public function updateErpDB(Request $req, $business_id) {
+        $business = Business::findOrFail($business_id);
+        if($business) {
+            if($business->updateERPDB($business)) {
+                session()->flash('flash_message', 'ERP DB updated successfully');
+                return redirect()->back();
+            }
+        }
+        throw new \Exception('Error updating status');
+    }
+
+    public function destroy($id) {
+        $business = Business::findOrFail($id);
+
+        $cert_c = $business->xprefix.'_compliance_cert.pem';
+        $cert_p = $business->xprefix.'_production_cert.pem';
+        $csr = $business->xprefix.'_cert.csr';
+
+        Business::unlink_file($cert_c);
+        Business::unlink_file($cert_p);
+        Business::unlink_file($csr);
+        Business::destroy($id);
+
+        session()->flash('flash_message', 'Business has been deleted, with its CSR, Compliance and Production Certificates.');
+        return redirect('businesses');
+    }
 }

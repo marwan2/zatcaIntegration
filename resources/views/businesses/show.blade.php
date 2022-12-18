@@ -118,13 +118,37 @@
 				</div>
 			</div>
 		</div>
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Update ERP database with needed columns: </div>
+				<div class="card-body">
+					<form action="{{url('businesses/'.$business->id.'/erp-db-updates')}}" method="POST"> @csrf
+						<div class="form-group form-inline">
+							<button type="submit" class="btn btn-primary" onclick="return window.confirm('Update ERP Database: Are you sure?')">Submit</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<div class="mt-3 card bg-light">
 		<div class="card-body">
-			<a href="{{route('businesses.edit', $business->id)}}" class="btn btn-outline-warning">Edit Business</a>
-			<a href="{{route('cert.pem', $business->id)}}" class="btn btn-outline-info" onclick="return window.confirm('Re-generate Certificates in .pem format: Are you sure?')">Generate .pem Certificates</a>
-			<a href="{{route('onboarding', $business->id)}}" class="btn btn-outline-success" onclick="return window.confirm('Becareful this will overwrite current CSR, CCSID, PCSID: Are you sure?')">Re-run Onboarding Process</a>
+			<div class="row">
+				<div class="col-md-9">
+					<a href="{{route('businesses.edit', $business->id)}}" class="btn btn-outline-warning">Edit Business</a>
+					<a href="{{route('cert.pem', $business->id)}}" class="btn btn-outline-info" onclick="return window.confirm('Re-generate Certificates in .pem format: Are you sure?')">Generate .pem Certificates</a>
+					<a href="{{route('onboarding', $business->id)}}" class="btn btn-outline-success" onclick="return window.confirm('Becareful this will overwrite current CSR, CCSID, PCSID: Are you sure?')">Re-run Onboarding Process</a>
+				</div>
+				<div class="col-md-3 d-flex justify-content-end">
+					<div class="dropdown">
+					  <a class="btn btn-outline-primary dropdown-toggle" href="#" role="button" id="dm_bs" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></a>
+					  <div class="dropdown-menu" aria-labelledby="dm_bs">
+					    {!!App\Helper::delete_ctrl($business, 'businesses', 'dropdown-item')!!}
+					  </div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 @endsection

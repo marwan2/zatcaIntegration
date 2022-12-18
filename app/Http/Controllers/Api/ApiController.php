@@ -32,8 +32,8 @@ class ApiController extends Controller
         }
 
         $data = $req->all();
-        $data['xprefix'] = $req->header('X-PREFIX');
-        $data['auth_token'] = $req->header('AUTH-TOKEN');
+        $data['ERP_xPrefix'] = $req->header('X-PREFIX');
+        $data['ERP_AuthToken'] = $req->header('AUTH-TOKEN');
 
         if($bs->alreadyOnboarded($data)) {
             return $hl->code(301)->msg('Business already onboarded.')->res();
@@ -42,7 +42,7 @@ class ApiController extends Controller
         $business = $bs->createBusiness($data);
 
         if($business) {
-            $updated = $bs->updateERPDB();
+            $updated = $business->updateERPDB();
         }
 
         if(!$business->csrExists()) {
@@ -60,10 +60,10 @@ class ApiController extends Controller
         }
 
         if($pcsid && $ccsid) {
-            $bs->updateOnboardingStatus(true);
+            $business->updateOnboardingStatus(true);
             return $hl->code(200)->msg('Business onboarding process completed successfully.')->res();
         } else {
-            $bs->updateOnboardingStatus(false);
+            $business->updateOnboardingStatus(false);
         }
 
         return $hl->code(301)->msg('Error while onboarding.')->res();
@@ -73,6 +73,7 @@ class ApiController extends Controller
         $hl = new Helper;
         $business = (new Business)->getBusiness($req->header('X-Prefix'));
         $trans_no = $req->get('trans_no');
+        $trans_type = $req->get('trans_type');
 
         if($business && $trans_no) {
             $invoice = Invoice::getInvoiceFromErp($trans_no, $business);
@@ -84,6 +85,10 @@ class ApiController extends Controller
                 ->setInvoice($invoice)
                 ->setInvoiceInDB($invoiceDB)
                 ->setNo($trans_no);
+
+            if($trans_type == \App\Helper::ERP_CREDITNOTE) {
+                $inv->setTypeCode(Invoice::CREDIT_NOTE);
+            }
             $invoice_xml = $inv->getXML();
 
             // Save XML file
@@ -114,7 +119,7 @@ class ApiController extends Controller
                 Log::warning($msg);
             }
 
-            ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output);
+            ReportingLog::addLog('Reporting', $business, $invoiceDB->id, $trans_no, $output, $trans_type);
             Log::info($output);
             return $hl->code(200)->msg($msg)->res($output);
         }
@@ -131,6 +136,7 @@ class ApiController extends Controller
         $hl = new Helper;
         $business = (new Business)->getBusiness($req->header('X-PREFIX'));
         $trans_no = $req->get('trans_no');
+        $trans_type = $req->get('trans_type');
 
         if($business && $trans_no) {
             $invoice = Invoice::getInvoiceFromErp($trans_no, $business);
@@ -142,6 +148,10 @@ class ApiController extends Controller
                 ->setInvoice($invoice)
                 ->setInvoiceInDB($invoiceDB)
                 ->setNo($trans_no);
+
+            if($trans_type == \App\Helper::ERP_CREDITNOTE) {
+                $inv->setTypeCode(Invoice::CREDIT_NOTE);
+            }
             $invoice_xml = $inv->getXML();
 
             // Save XML file
@@ -175,7 +185,7 @@ class ApiController extends Controller
             }
 
             // Save action to log table
-            ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output);
+            ReportingLog::addLog('Compliance', $business, $invoiceDB->id, $trans_no, $output, $trans_type);
             Log::info($output);
             return $hl->code(200)->msg($msg)->res($output);
         }

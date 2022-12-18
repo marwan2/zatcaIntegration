@@ -13,7 +13,11 @@
 		<div class="row">
 			<div class="col-md-6">
 				<strong>To Refresh API Token click here</strong><br>
-				<a href="{{url('account/refresh-token')}}" class="btn btn-outline-info">Refresh token</a>
+				<a href="{{url('account/refresh-token')}}" class="btn btn-outline-info">Refresh Token</a>
+			</div>
+			<div class="col-md-6">
+				<strong>Change account password</strong><br>
+				<a href="{{url('account/password')}}" class="btn btn-outline-info">Change Password</a>
 			</div>
 		</div>
 	</div>

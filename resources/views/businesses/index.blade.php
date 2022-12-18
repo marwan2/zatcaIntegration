@@ -24,14 +24,14 @@
 					<td>{{$bs->id}}</td>
 					<td><a href="{{url('businesses/'.$bs->id)}}" class="btn">{{$bs->name}}</a></td>
 					<td>{{$bs->trn}}</td>
-					<td>{{$bs->country_code}}</td>
+					<td>{{$bs->country_iso2}}</td>
 					<td>{{$bs->xprefix}}</td>
 					<td>{{$bs->created_at}} </td>
 					<td nowrap="">
 						<a href="{{url('businesses/'.$bs->id.'/edit')}}" class="btn btn-warning">Edit</a>
 						<a href="{{url('invoices?business_id='.$bs->id)}}" class="btn btn-primary">Invoices</a>
 						<a href="{{route('csid.renewal', $bs->id)}}" class="btn btn-primary">PCSID Renewal</a>
-						<a href="{{route('logs', $bs->id)}}" class="btn btn-danger" title="Reporting Logs">Logs</a>
+						<a href="{{route('logs.index')}}" class="btn btn-danger" title="Reporting Logs">Logs</a>
 					</td>
 				</tr>
 				@endforeach

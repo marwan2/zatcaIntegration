@@ -23,10 +23,18 @@ class ReportingLog extends Model
         return $this->belongsTo(Invoice::class);
     }
     
-    public static function addLog($action='Reporting', $business, $invoice_id, $trans_no, $api_response=null, $method="api") {
+    public static function addLog($action='Reporting', 
+        $business,
+        $invoice_id, 
+        $trans_no,
+        $api_response=null, 
+        $trans_type='invoice', 
+        $method="api"
+    ) {
         $item = self::create([
             'method'        => $method,
             'action'        => $action,
+            'trans_type'    => $trans_type ?? 'invoice',
             'business_id'   => $business->id,
             'invoice_id'    => $invoice_id,
             'trans_no'      => $trans_no,

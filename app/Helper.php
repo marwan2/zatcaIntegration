@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Form;
 
 class Helper extends Model
 {
@@ -34,5 +35,23 @@ class Helper extends Model
 
         $response = compact('data', 'message', 'code');
         return response()->json($response, $code, $headers);
+    }
+
+    public static function del_url ($item, $url) { 
+        return url($url.'/'.$item->id);
+    }
+
+    public static function delete_ctrl($item, $url, $class='') {
+        $output = 
+            Form::open(['method'=>'DELETE', 'url'=>[self::del_url($item, $url)], 'style'=>'display:inline']).
+            Form::button('<span class="fa fa-trash-alt"></span> Delete', array(
+                'type' => 'submit',
+                'class' => 'btn btn-danger '.$class,
+                'title' => 'Delete', 
+                'data-id'=>$item->id,
+                'onclick'=>'return confirm("Delete record: Are you sure?")'
+            )).
+            Form::close();
+        return $output;
     }
 }

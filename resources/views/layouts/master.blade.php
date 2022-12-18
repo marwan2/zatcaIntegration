@@ -71,8 +71,10 @@
 
 	@yield('content')
 </main>
-<footer class="w-100 bg-light mt-5 p-2 text-center text-muted">
-	<small>By McLedger</small>
+<footer class="w-100 bg-light mt-5 py-3 text-center text-muted">
+	<small>By <a href="https://mcledger.co" target="_blank">McLedger</a></small>
 </footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.slim.min.js"></script>
+<script src="{{asset('assets/js/bootstrap.bundle.min.js')}}"></script>
 @yield('script')
 </body></html>

@@ -13,14 +13,8 @@ class LogsController extends Controller
 
     }
 
-    public function index(Request $req, $business_id=null) {
-        $business = null;
-
-        if($business_id) {
-            $business = Business::findOrFail($business_id);
-        } else {
-            $business = Business::selected($req);
-        }
+    public function index(Request $req) {
+        $business = Business::selected($req);
 
         $logs = new ReportingLog;
         $logs = $logs->whereBusiness_id($business->id);
@@ -30,6 +24,9 @@ class LogsController extends Controller
         }
         if($req->has('action') && $req->get('action')) {
             $logs = $logs->where('action', $req->get('action'));
+        }
+        if($req->has('type') && $req->get('type')) {
+            $logs = $logs->where('trans_type', $req->get('trans_type'));
         }
         if($req->has('q') && $req->get('q')) {
             $q = $req->get('q');
@@ -44,5 +41,13 @@ class LogsController extends Controller
         $logs = $logs->orderBy('created_at', 'DESC')->paginate(10);
 
     	return view('logs.index', compact('logs'));
+    }
+
+    public function destroy($id) {
+        $row = ReportingLog::findOrFail($id);
+        ReportingLog::destroy($id);
+
+        session()->flash('flash_message', 'Record has been deleted');
+        return redirect('logs');
     }
 }
