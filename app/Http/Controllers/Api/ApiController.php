@@ -71,9 +71,17 @@ class ApiController extends Controller
 
     public function reporting(Request $req) {
         $hl = new Helper;
-        $business = (new Business)->getBusiness($req->header('X-Prefix'));
+        $business = (new Business)->getBusiness($req->header('X-PREFIX'));
         $trans_no = $req->get('trans_no');
         $trans_type = $req->get('trans_type');
+
+        if(!$trans_no) {
+            return $hl->code(401)->msg("Transaction no. required")->res();
+        }
+
+        if(!$business) {
+            return $hl->code(401)->msg("Sorry, we cannot find the business record.")->res();
+        }
 
         if($business && $trans_no) {
             $invoice = Invoice::getInvoiceFromErp($trans_no, $business);
@@ -126,7 +134,7 @@ class ApiController extends Controller
 
         $msg = 'Missing params on reporting invoice #' . $trans_no;
         Log::error($msg);
-        return $hl->code(401)->msg($msg)->res($output);
+        return $hl->code(401)->msg($msg)->res();
     }
 
     /**
