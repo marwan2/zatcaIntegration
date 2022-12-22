@@ -259,7 +259,7 @@ class InvoicesController extends Controller
             $api->setBusiness($business);
             $api->setInvoice($invoiceDB);
             $output = $api->invoiceCompliance($signed_invoice_encoded, $invoice_hash);
-            
+
             if (isset($output['validationResults']) && isset($output['validationResults']['status']) == 'PASS') {
                 if(isset($output['clearanceStatus']) && $output['clearanceStatus'] == 'CLEARED') {
                     print ('Invoice compliance passed successfully');

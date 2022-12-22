@@ -262,10 +262,8 @@ class API extends Model
             $output = json_decode($data->getContents(), 1);
         } catch(\Exception $e) {
             if($e != null) {
-                //print($e->getResponse()->getBody()->getContents());
                 $output = $e->getResponse()->getBody()->getContents() ?? null;
             }
-            //print($e->getMessage());
             \Log::error($e->getMessage());
         }
         return $output;

@@ -172,4 +172,13 @@ class BusinessesController extends Controller
         session()->flash('flash_message', 'Business has been deleted, with its CSR, Compliance and Production Certificates.');
         return redirect('businesses');
     }
+
+    public function sessionReload(Request $req) {
+        if($req->session()->has('se_business')) {
+            $business = $req->session()->get('se_business');
+            $business = Business::findOrFail($business->id);
+            $req->session()->put('se_business', $business);
+        }
+        return redirect()->back();
+    }
 }

@@ -65,7 +65,10 @@
 	      {!!Session::get('se_business')->name ?? ''!!} 
 	      (Prefix: {!!Session::get('se_business')->xprefix ?? ''!!})
 	      </strong>
-	      <a href="{{url('businesses/select')}}" class="btn btn-outline-light">Switch</a>
+        <div>
+  	      <a href="{{url('businesses/select')}}" class="btn btn-outline-light">Switch</a>
+          <a href="{{route('bs.sess.reload')}}" class="btn btn-outline-light" title="Session Reload">R</a>
+        </div>
 	    </div>
 	@endif
 

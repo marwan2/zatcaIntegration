@@ -173,7 +173,7 @@ class XMLInvoice extends Model
         $invoice = $this->getInvoice();
 
         $supplier_name = $business->name;
-        $country_iso2 = $business->country_code;
+        $country_iso2 = $business->country_iso2;
         $street_name = $business->street_name;
         $building_no = $business->building_no;
         $city_name = $business->city;

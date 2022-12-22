@@ -32,6 +32,7 @@ Route::group(['prefix'=>'/', 'middleware'=>['auth']], function(){
 	Route::get('businesses/{business_id}/geneate-certificate-pem', 'BusinessesController@generateCertPem')->name('cert.pem');
 	Route::post('businesses/{business_id}/update-erp-onboarding-status', 'BusinessesController@updateErpOnboarding')->name('onb.erp');
 	Route::post('businesses/{business_id}/erp-db-updates', 'BusinessesController@updateErpDB')->name('onb.dberp');
+	Route::get('businesses/session-reload', 'BusinessesController@sessionReload')->name('bs.sess.reload');
 	Route::get('cert-download/{file}', 'HomeController@download');
 
 	Route::get('account', 'HomeController@showUser');
